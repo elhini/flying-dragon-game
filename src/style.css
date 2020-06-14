@@ -1,0 +1,160 @@
+html, 
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    overflow: hidden;
+}
+
+#player {
+    width: 200px; 
+    height: 200px; 
+    position: absolute; 
+    left: 0;
+    top: 0;
+    background-image: url(./img/player.png);
+    background-size: 100%;
+    z-index: 1;
+}
+
+#player.animated-transform {
+    transition: transform 0.5s linear;
+}
+
+#player.finished:after {
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    position: absolute;
+    left: -50px;
+    top: -50px;
+    content: '';
+}
+
+#player.won:after {
+    box-shadow: 0 0 10px green;
+}
+
+#player.dead:after {
+    box-shadow: 0 0 10px red;
+}
+
+.item {
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-size: 100%;
+}
+
+.item[data-type="1"] {
+    background-image: url(./img/item-type-1.png);
+}
+
+.item[data-type="2"] {
+    background-image: url(./img/item-type-2.png);
+}
+
+.item[data-type="3"] {
+    background-image: url(./img/item-type-3.png);
+}
+
+.scale {
+    position: absolute;
+    top: 0;
+    width: 50%;
+    height: 30px;
+    border: 1px solid gray;
+}
+
+.scale-fill {
+    height: 100%;
+    opacity: 0.5;
+}
+
+.scale-text {
+    position: absolute; 
+    left: 0; 
+    top: 0;
+    width: 100%;
+    height: 30px;
+    text-align: center;
+    font-family: sans-serif;
+    font-size: 30px;
+    z-index: 1;
+}
+
+#items-scale {
+    left: 0;
+}
+
+#items-scale-fill {
+    background-color: green;
+    width: 0;
+}
+
+#items-scale-text {
+    color: darkgreen;
+}
+
+#player-health-scale {
+    left: 50%;
+}
+
+#player-health-scale-fill {
+    background-color: red;
+    width: 100%;
+}
+
+#player-health-scale-text {
+    color: darkred;
+}
+
+.enemy {
+    width: 70px;
+    height: 70px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-size: 100%;
+}
+
+.enemy[data-type="1"] {
+    background-image: url(./img/enemy-type-1.png);
+}
+
+.enemy[data-type="2"] {
+    background-image: url(./img/enemy-type-2.png);
+}
+
+.enemy[data-type="3"] {
+    background-image: url(./img/enemy-type-3.png);
+}
+
+.enemy.hitting:after {
+    width: 100px;
+    height: 100px;
+    box-shadow: 0 0 10px red;
+    border-radius: 50%;
+    position: absolute;
+    left: -15px;
+    top: -15px;
+    content: '';
+}
+
+.fire {
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(yellow, red);
+    box-shadow: 0 0 10px red;
+    border-radius: 50%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0;
+    transition: all 1s linear;
+}
