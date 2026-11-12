@@ -1,5 +1,6 @@
 import $ from 'jquery';
 import './style.css';
+import { setupTouchControls } from './touch-controls.js';
 
 var player = {
     health: {
@@ -32,6 +33,14 @@ $(document).ready(() => {
     distributeEnemies();
     $('#player, .item, .enemy').each((i, elem) => fitToViewport($(elem)));
     $viewport.on('resize', resizeField);
+    const dispatchKey = (type, code) => {
+        $(document).trigger($.Event(type, { which: code, keyCode: code }));
+    };
+    setupTouchControls({
+        isFinished: () => player.dead || player.won,
+        onKeyDown: code => dispatchKey('keydown', code),
+        onKeyUp: code => dispatchKey('keyup', code)
+    });
     $('#close-game-help').on('click', e => {
         e.currentTarget.blur();
         $('#game-help').prop('hidden', true);

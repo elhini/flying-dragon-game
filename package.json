@@ -13,7 +13,7 @@
     "dev": "vite --host 127.0.0.1",
     "start:dev": "npm run dev",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "node --check src/index.js && node --check vite.config.js && node --check playwright.config.js"
+    "check": "node --check src/index.js && node --check src/touch-controls.js && node --check vite.config.js && node --check playwright.config.js"
   },
   "keywords": [
     "flying", "dragon", "game"
