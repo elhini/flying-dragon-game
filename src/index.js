@@ -1,12 +1,5 @@
 import $ from 'jquery';
 import './style.css';
-import playerImg from './img/player.png';
-import itemType1Img from './img/item-type-1.png';
-import itemType2Img from './img/item-type-2.png';
-import itemType3Img from './img/item-type-3.png';
-import enemyType1Img from './img/enemy-type-1.png';
-import enemyType2Img from './img/enemy-type-2.png';
-import enemyType3Img from './img/enemy-type-3.png';
 
 var player = {
     health: {
@@ -37,13 +30,23 @@ $(document).ready(() => {
 
     distributeItems();
     distributeEnemies();
+    $('#player, .item, .enemy').each((i, elem) => fitToViewport($(elem)));
+    $viewport.on('resize', resizeField);
+    $('#close-game-help').on('click', e => {
+        e.currentTarget.blur();
+        $('#game-help').prop('hidden', true);
+    });
 
     var pressedCodes = {};
     
     $(document).on('keydown keyup', e => {
         var isPressed = e.type == 'keydown';
         var code = e.keyCode || e.which;
-        pressedCodes[code] = isPressed;
+        var isButton = $(e.target).closest('button').length > 0;
+        pressedCodes[code] = isPressed && !isButton;
+        if (isButton) {
+            return;
+        }
         var pressedSides = [];
         $.each(pressedCodes, (code, isPressed) => {
             var codesToMove = {
@@ -55,7 +58,7 @@ $(document).ready(() => {
             var side = codesToMove[code];
             isPressed && side && pressedSides.push(side);
         });
-        if (player.dead || !isPressed) {
+        if (player.dead || player.won || !isPressed) {
             return;
         }
         $.each(pressedSides, (i, side) => {
@@ -63,6 +66,7 @@ $(document).ready(() => {
         });
         if (pressedSides.length) {
             rotateToSide($player, pressedSides);
+            fitToViewport($player);
             checkIntersections();
             checkCompletion();
         }
@@ -73,6 +77,54 @@ $(document).ready(() => {
         rotateEnemies();
     });
 });
+
+function resizeField() {
+    var previous = { ...viewport };
+    viewport.width = $(window).width();
+    viewport.height = $(window).height();
+    // Complete a pending turn before measuring the resized player's position.
+    stopPlayerTurn();
+    $('#player, .item, .enemy').each((i, elem) => {
+        var $elem = $(elem);
+        $elem.css({
+            left: parseFloat($elem.css('left')) * viewport.width / previous.width,
+            top: parseFloat($elem.css('top')) * viewport.height / previous.height
+        });
+        fitToViewport($elem);
+    });
+    rotateEnemies();
+}
+
+function fitToViewport($elem) {
+    var width = $elem.width();
+    var height = $elem.height();
+    // Enemies turn on every move; the player must also be able to reach edge gems.
+    var angle = $elem.is('#player') ? getRotateDegree($elem) * Math.PI / 180 : 0;
+    var rotatedWidth = Math.abs(width * Math.cos(angle)) + Math.abs(height * Math.sin(angle));
+    var rotatedHeight = Math.abs(width * Math.sin(angle)) + Math.abs(height * Math.cos(angle));
+    if ($elem.is('.enemy')) {
+        rotatedWidth = rotatedHeight = Math.hypot(width, height);
+    }
+    var marginX = Math.max(0, (rotatedWidth - width) / 2);
+    var marginY = Math.max(0, (rotatedHeight - height) / 2);
+    var left = Math.max(marginX, Math.min(parseFloat($elem.css('left')), viewport.width - width - marginX));
+    var top = Math.max(marginY, Math.min(parseFloat($elem.css('top')), viewport.height - height - marginY));
+    if ($elem.is('#player')) {
+        var turnMarginX = (Math.hypot(width, height) - width) / 2;
+        var turnMarginY = (Math.hypot(width, height) - height) / 2;
+        if (left < turnMarginX || left + width + turnMarginX > viewport.width ||
+            top < turnMarginY || top + height + turnMarginY > viewport.height) {
+            // Snap edge turns so their intermediate angles cannot leave the field.
+            stopPlayerTurn();
+        }
+    }
+    $elem.css({ left, top });
+}
+
+function stopPlayerTurn() {
+    $player.removeClass('animated-transform');
+    $player[0].getAnimations().forEach(animation => animation.cancel());
+}
 
 function distributeItems() {
     var html = '';
@@ -193,7 +245,7 @@ function moveBySide($elem, side, step, checkViewport) {
 
 function checkIntersections() {
     // startCountTime('checkIntersections-items');
-    checkIntersection($player, $('.item'), 'items', (itemElem) => {
+    checkIntersection($player, $('.item'), (itemElem) => {
         $(itemElem).remove();
         var collected = itemsCount - $('.item').length;
         $('#items-scale-text').html(collected + ' / ' + itemsCount);
@@ -202,7 +254,7 @@ function checkIntersections() {
     // stopCountTime('checkIntersections-items');
 
     // startCountTime('checkIntersections-enemies');
-    checkIntersection($player, $('.enemy'), 'enemies', (enemyElem) => {
+    checkIntersection($player, $('.enemy'), (enemyElem) => {
         $(enemyElem).addClass('hitting');
         player.health.remain = Math.max(player.health.remain - enemy.hit.force, 0);
         $('#player-health-scale-text').html(player.health.remain + ' / ' + player.health.total);
@@ -213,20 +265,10 @@ function checkIntersections() {
     // stopCountTime('checkIntersections-enemies');
 }
 
-var positionCache = {
-    items: {},
-    enemies: {}
-};
-
-function checkIntersection($main, $elems, type, intCallback, notIntCallback) {
+function checkIntersection($main, $elems, intCallback, notIntCallback) {
     var mainRect = $main[0].getBoundingClientRect();
     $elems.each((i, elem) => {
-        var id = $(elem).data('id');
-        var itemRect = type && positionCache[type][id];
-        if (!itemRect) {
-            itemRect = elem.getBoundingClientRect();
-            type && (positionCache[type][id] = itemRect);
-        }
+        var itemRect = elem.getBoundingClientRect();
         var isIntersects = !(
             itemRect.left > mainRect.right || 
             itemRect.right < mainRect.left || 
@@ -243,13 +285,16 @@ function checkIntersection($main, $elems, type, intCallback, notIntCallback) {
 }
 
 function checkCompletion() {
-    if ($('.item').length === 0) {
-        player.won = true;
-        $player.addClass('finished won');
-    }
     if (player.health.remain === 0) {
         player.dead = true;
         $player.addClass('finished dead');
+        $('#game-help').prop('hidden', true);
+        $('#game-over').prop('hidden', false);
+    } else if ($('.item').length === 0) {
+        player.won = true;
+        $player.addClass('finished won');
+        $('#game-help').prop('hidden', true);
+        $('#game-won').prop('hidden', false);
     }
 }
 
@@ -267,13 +312,13 @@ function shoot() {
     var i1 = setInterval(() => {
         moveFireBySide($fire, side, step);
         // check for exit from screen
-        checkIntersection($fire, $('body'), null, null, () => {
+        checkIntersection($fire, $('body'), null, () => {
             hideFire($fire);
         });
     }, 1000);
     var i2 = setInterval(() => {
         // check for collision with enemy
-        checkIntersection($fire, $('.enemy'), 'enemies', (enemyElem) => {
+        checkIntersection($fire, $('.enemy'), (enemyElem) => {
             hideFire($fire);
             $(enemyElem).remove();
         });
@@ -315,12 +360,7 @@ function getCenterCoords(rect) {
 function rotateEnemies() {
     var playerCenterCoords = getPlayerCenterCoords();
     $('.enemy').each((i, enemyElem) => {
-        var id = $(enemyElem).data('id');
-        var enemyRect = positionCache['enemies'][id];
-        if (!enemyRect) {
-            enemyRect = enemyElem.getBoundingClientRect();
-            positionCache['enemies'][id] = enemyRect;
-        }
+        var enemyRect = enemyElem.getBoundingClientRect();
         var enemyCenterCoords = getCenterCoords(enemyRect);
         var dx = playerCenterCoords.x - enemyCenterCoords.x;
         var dy = playerCenterCoords.y - enemyCenterCoords.y;

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flying Dragon</title>
+  </head>
+  <body>
+    <div id="player"></div>
+    <div id="field"></div>
+    <div id="items-scale" class="scale">
+        <div id="items-scale-fill" class="scale-fill"></div>
+        <div id="items-scale-text" class="scale-text"></div>
+    </div>
+    <div id="player-health-scale" class="scale">
+        <div id="player-health-scale-fill" class="scale-fill"></div>
+        <div id="player-health-scale-text" class="scale-text"></div>
+    </div>
+    <aside id="game-help" class="game-hint" lang="ru" aria-label="Как играть">
+      Собери все 10 кристаллов и избегай врагов. Двигайся стрелками, стреляй пробелом.
+      Для новой игры обнови страницу. Нужна клавиатура.
+      <button id="close-game-help" type="button" aria-label="Закрыть подсказку">×</button>
+    </aside>
+    <aside id="game-over" class="game-hint" lang="ru" role="alert" hidden>
+      Твой дракон погиб. Обнови страницу, чтобы начать заново
+    </aside>
+    <aside id="game-won" class="game-hint" lang="ru" role="status" hidden>
+      Ты победил, поздравляю! Обнови страницу, чтобы начать заново
+    </aside>
+    <script type="module" src="/src/index.js"></script>
+  </body>
+</html>
