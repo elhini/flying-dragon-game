@@ -5,6 +5,7 @@ const baseURL = externalURL || 'http://127.0.0.1:4173/games/flying-dragon/';
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.ts',
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   use: {

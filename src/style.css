@@ -87,18 +87,12 @@ body {
 }
 
 #player {
-    width: min(200px, 70vmin);
-    height: min(200px, 70vmin);
     position: absolute; 
     left: 0;
     top: 0;
     background-image: url(./img/player.png);
     background-size: 100%;
     z-index: 1;
-}
-
-#player.animated-transform {
-    transition: transform 0.5s linear;
 }
 
 #player.finished:after {
@@ -120,8 +114,6 @@ body {
 }
 
 .item {
-    width: min(30px, 20vmin);
-    height: min(30px, 20vmin);
     position: absolute;
     left: 0;
     top: 0;
@@ -192,8 +184,6 @@ body {
 }
 
 .enemy {
-    width: min(70px, 50vmin);
-    height: min(70px, 50vmin);
     position: absolute;
     left: 0;
     top: 0;
@@ -224,8 +214,6 @@ body {
 }
 
 .fire {
-    width: 50px;
-    height: 50px;
     background: radial-gradient(yellow, red);
     box-shadow: 0 0 10px red;
     border-radius: 50%;
@@ -233,7 +221,6 @@ body {
     left: 0;
     top: 0;
     opacity: 0;
-    transition: all 1s linear;
 }
 
 /* Touch controls are only shown on coarse-pointer devices. */

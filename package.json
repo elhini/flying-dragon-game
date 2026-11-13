@@ -9,23 +9,25 @@
   },
   "scripts": {
     "test": "playwright test",
+    "test:unit": "node --test tests/*.test.ts",
     "test:deploy": "python3 -m unittest discover -s tests -p '*_test.py'",
     "build": "vite build",
     "dev": "vite --host 127.0.0.1",
     "start:dev": "npm run dev",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "node --check src/index.js && node --check src/touch-controls.js && node --check vite.config.js && node --check playwright.config.js"
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
   },
   "keywords": [
-    "flying", "dragon", "game"
+    "flying",
+    "dragon",
+    "game"
   ],
   "author": "elhini",
   "license": "ISC",
-  "dependencies": {
-    "jquery": "^3.7.1"
-  },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2",
     "vite": "^8.3.8"
   }
 }
