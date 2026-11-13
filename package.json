@@ -9,6 +9,7 @@
   },
   "scripts": {
     "test": "playwright test",
+    "test:deploy": "python3 -m unittest discover -s tests -p '*_test.py'",
     "build": "vite build",
     "dev": "vite --host 127.0.0.1",
     "start:dev": "npm run dev",

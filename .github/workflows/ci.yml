@@ -1,8 +1,9 @@
-name: Checks
+name: Check and deploy game
 
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,12 +20,46 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - run: npm run test:deploy
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - run: npm audit --audit-level=high
+      - uses: actions/upload-artifact@v7
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        with:
+          name: game-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: browser-test-results
           path: test-results/
           retention-days: 7
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ vars.DEPLOY_URL }}
+    concurrency:
+      group: game-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: game-build
+          path: dist/
+      - name: Deploy and verify HTTPS
+        env:
+          HOSTER_HOST: ${{ secrets.HOSTER_HOST }}
+          HOSTER_USER: ${{ secrets.HOSTER_USER }}
+          HOSTER_SSH_KEY: ${{ secrets.HOSTER_SSH_KEY }}
+          HOSTER_KNOWN_HOSTS: ${{ secrets.HOSTER_KNOWN_HOSTS }}
+          DEPLOY_URL: ${{ vars.DEPLOY_URL }}
+        run: python3 scripts/deploy.py
