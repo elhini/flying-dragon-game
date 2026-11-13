@@ -37,6 +37,18 @@ body {
     padding-right: 56px;
 }
 
+#game-won {
+    border-color: #81c784;
+    background: rgb(232 245 233 / 94%);
+    color: #1b5e20;
+}
+
+#game-over {
+    border-color: #e57373;
+    background: rgb(255 235 238 / 94%);
+    color: #b71c1c;
+}
+
 #close-game-help {
     position: absolute;
     top: 4px;

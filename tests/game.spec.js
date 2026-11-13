@@ -32,6 +32,34 @@ async function resizeGame(page, size) {
   await page.evaluate(() => new Promise(requestAnimationFrame));
 }
 
+for (const key of ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'Space']) {
+  test(`hides the initial hint on physical ${key}`, async ({ page }) => {
+    await openGame(page);
+    await expect(page.locator('#game-help')).toBeVisible();
+    await page.keyboard.press(key);
+    expect(await page.locator('#game-help').isVisible()).toBe(false);
+  });
+}
+
+test('keeps the initial hint for unrelated keys and key releases', async ({ page }) => {
+  await openGame(page);
+  await page.keyboard.press('a');
+  await page.keyboard.up('ArrowRight');
+  await expect(page.locator('#game-help')).toBeVisible();
+});
+
+test.describe('touch hint dismissal', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  for (const name of ['Влево', 'Вверх', 'Вправо', 'Вниз', 'Стрелять']) {
+    test(`hides the initial hint on virtual ${name}`, async ({ page }) => {
+      await openGame(page);
+      await expect(page.locator('#game-help')).toBeVisible();
+      await page.getByRole('button', { name, exact: true }).tap();
+      expect(await page.locator('#game-help').isVisible()).toBe(false);
+    });
+  }
+});
+
 test('loads game assets from the deployment subdirectory and accepts keyboard input', async ({ page }) => {
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));

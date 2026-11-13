@@ -70,6 +70,9 @@ $(document).ready(() => {
         if (player.dead || player.won || !isPressed) {
             return;
         }
+        if (code === 32 || (code >= 37 && code <= 40)) {
+            $('#game-help').prop('hidden', true);
+        }
         $.each(pressedSides, (i, side) => {
             moveBySide($player, side, player.step, true);
         });
