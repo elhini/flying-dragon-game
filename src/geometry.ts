@@ -1,15 +1,15 @@
 export interface Point { x: number; y: number }
 export interface Size { width: number; height: number }
 export interface Rect extends Point, Size {}
-export type Direction = 'top' | 'left' | 'right' | 'bottom';
-export type Facing = Direction | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 
 export const clamp = (value: number, min: number, max: number): number =>
   Math.max(min, Math.min(value, max));
 
 export function sizesFor(viewport: Size) {
   const vmin = Math.min(viewport.width, viewport.height);
-  const square = (side: number): Size => ({ width: side, height: side });
+  // Leave space for a clear starting area even in a very small square window.
+  const scale = Math.min(1, Math.max(viewport.width, viewport.height) / 480);
+  const square = (side: number): Size => ({ width: side * scale, height: side * scale });
   return {
     player: square(Math.min(200, 0.7 * vmin)),
     item: square(Math.min(30, 0.2 * vmin)),
@@ -40,22 +40,37 @@ export function fit(position: Point & { angle?: number }, size: Size, viewport: 
   position.y = clamp(position.y, marginY, viewport.height - size.height - marginY);
 }
 
-export const vectors: Record<Facing, Point> = {
-  top: { x: 0, y: -1 }, bottom: { x: 0, y: 1 },
-  left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
-  'top-left': { x: -1, y: -1 }, 'top-right': { x: 1, y: -1 },
-  'bottom-left': { x: -1, y: 1 }, 'bottom-right': { x: 1, y: 1 },
-};
+export function fitOutside(position: Point, size: Size, viewport: Size, area: Rect, reserveTurn = false): void {
+  fit(position, size, viewport, reserveTurn);
+  const width = reserveTurn ? Math.hypot(size.width, size.height) : size.width;
+  const height = reserveTurn ? width : size.height;
+  const marginX = (width - size.width) / 2;
+  const marginY = (height - size.height) / 2;
+  if (!intersects({ x: position.x - marginX, y: position.y - marginY, width, height }, area)) return;
+  const gap = Math.min(1, Math.min(viewport.width, viewport.height) / 100);
+  // Pick the nearest valid outer strip, without retrying random positions.
+  const candidates = [
+    { x: area.x - size.width - marginX - gap, y: position.y },
+    { x: area.x + area.width + marginX + gap, y: position.y },
+    { x: position.x, y: area.y - size.height - marginY - gap },
+    { x: position.x, y: area.y + area.height + marginY + gap },
+  ].filter(point => point.x >= marginX - 0.000001 && point.y >= marginY - 0.000001 &&
+    point.x + size.width + marginX <= viewport.width + 0.000001 && point.y + size.height + marginY <= viewport.height + 0.000001);
+  candidates.sort((a, b) => Math.hypot(a.x - position.x, a.y - position.y) - Math.hypot(b.x - position.x, b.y - position.y));
+  const point = candidates[0];
+  if (!point) throw new Error('No room outside the starting area');
+  Object.assign(position, point);
+}
 
-export const angles: Record<Facing, number> = {
-  top: 0, bottom: 180, left: -90, right: 90,
-  'top-left': -45, 'top-right': 45, 'bottom-left': -135, 'bottom-right': 135,
-};
+export function circlesIntersect(a: Point, radiusA: number, b: Point, radiusB: number): boolean {
+  return Math.hypot(a.x - b.x, a.y - b.y) <= radiusA + radiusB;
+}
 
-export function facingFor(directions: readonly Direction[]): Facing | undefined {
-  const x = Number(directions.includes('right')) - Number(directions.includes('left'));
-  const y = Number(directions.includes('bottom')) - Number(directions.includes('top'));
-  return (Object.keys(vectors) as Facing[]).find(key => vectors[key].x === x && vectors[key].y === y);
+export function normalized(vector: Point): Point {
+  const length = Math.hypot(vector.x, vector.y);
+  return length > 0 && Number.isFinite(length)
+    ? { x: vector.x / length, y: vector.y / length }
+    : { x: 0, y: 0 };
 }
 
 // Sweep a moving box against a stationary one, returning time of first contact.

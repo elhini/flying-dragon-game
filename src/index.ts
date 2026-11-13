@@ -2,6 +2,7 @@ import './style.css';
 import { advanceGame, applyCommand, createGame, resizeGame } from './game.ts';
 import { createInput, setupKeyboard } from './input.ts';
 import { setupTouchControls } from './touch-controls.ts';
+import { setupPointerControls } from './pointer-controls.ts';
 import { createView, element } from './view.ts';
 
 const viewport = () => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight });
@@ -9,17 +10,22 @@ let state = createGame(viewport());
 let previous: number | undefined;
 const view = createView();
 const input = createInput(command => {
+  if (state.status !== 'playing') return;
   applyCommand(state, command);
-  if (state.status !== 'playing') resetInput();
   view.render(state);
 });
 const removeKeyboard = setupKeyboard(input);
 const touch = setupTouchControls({
   isFinished: () => state.status !== 'playing',
-  onKeyDown: code => input.press(code, 'touch'),
-  onKeyUp: code => input.release(code, 'touch'),
+  onDirection: direction => input.setJoystick(direction),
+  onFire: () => input.fire(),
 });
-function resetInput(): void { input.reset(); touch.reset(); }
+const pointer = setupPointerControls({ isFinished: () => state.status !== 'playing', onTarget: point => input.setTarget(point) });
+function resetInput(): void { input.reset(); touch.reset(); pointer.reset(); }
+
+element('#game-controls-help').textContent = window.matchMedia('(pointer: coarse)').matches
+  ? 'Лети джойстиком или удерживай палец на поле. Стреляй кнопкой «Огонь».'
+  : 'Зажми левую кнопку мыши, чтобы лететь к курсору, или используй стрелки. Стреляй пробелом.';
 
 const events = new AbortController();
 element<HTMLButtonElement>('#close-game-help').addEventListener('click', event => {
@@ -49,6 +55,7 @@ let frameId = 0;
 function frame(now: number): void {
   // Resume a hidden tab without simulating an unbounded backlog of frames.
   if (previous !== undefined && !document.hidden && advanceGame(state, Math.min(now - previous, 100))) {
+    if (state.status !== 'playing') resetInput();
     view.render(state);
   }
   previous = now;
@@ -63,4 +70,5 @@ if (import.meta.hot) import.meta.hot.dispose(() => {
   events.abort();
   removeKeyboard();
   touch.dispose();
+  pointer.dispose();
 });

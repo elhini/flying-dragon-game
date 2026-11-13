@@ -7,11 +7,15 @@ body {
 
 html {
     overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 body {
     position: relative;
     overflow: hidden;
+    touch-action: none;
 }
 
 .game-hint {
@@ -237,11 +241,31 @@ body {
     user-select: none;
     -webkit-user-select: none;
 }
-.touch-pad {
+.joystick {
+    position: relative;
     display: grid;
-    grid-template-columns: repeat(3, 52px);
-    grid-template-rows: repeat(3, 52px);
-    gap: 3px;
+    place-items: center;
+    width: min(148px, 42vw);
+    height: min(148px, 42vw);
+    box-sizing: border-box;
+    border: 2px solid rgba(255,255,255,.85);
+    border-radius: 50%;
+    background: rgba(30,40,50,.55);
+    touch-action: none;
+    pointer-events: auto;
+    -webkit-touch-callout: none;
+}
+.joystick.pressed { background: rgba(30,60,80,.72); }
+.joystick-guide { color: rgba(255,255,255,.4); font: 100px/1 sans-serif; pointer-events: none; }
+.joystick-knob {
+    position: absolute;
+    width: min(52px, 16vw);
+    height: min(52px, 16vw);
+    border: 2px solid rgba(255,255,255,.9);
+    border-radius: 50%;
+    background: rgba(65,140,180,.95);
+    box-shadow: 0 3px 8px rgba(0,0,0,.25);
+    pointer-events: none;
 }
 .touch-button {
     border: 2px solid rgba(255,255,255,.85);
@@ -255,16 +279,14 @@ body {
     -webkit-touch-callout: none;
 }
 .touch-button.pressed { background: rgba(40,120,160,.95); }
-.touch-up { grid-column: 2; grid-row: 1; }
-.touch-left { grid-column: 1; grid-row: 2; }
-.touch-right { grid-column: 3; grid-row: 2; }
-.touch-down { grid-column: 2; grid-row: 3; }
 .touch-fire { width: 76px; height: 76px; border-radius: 50%; font-size: 16px; }
 @media (pointer: coarse) {
     .game-hint { bottom: 184px; }
 }
 @media (max-height: 420px) and (pointer: coarse) {
-    .touch-pad { grid-template-columns: repeat(3, 42px); grid-template-rows: repeat(3, 42px); }
+    .joystick { width: min(112px, 42vw); height: min(112px, 42vw); }
+    .joystick-knob { width: min(44px, 16vw); height: min(44px, 16vw); }
+    .joystick-guide { font-size: 78px; }
     .touch-fire { width: 62px; height: 62px; }
     .game-hint { bottom: 145px; }
 }

@@ -5,6 +5,7 @@ interface Position { x: number; y: number }
 export interface FieldLayout { items?: Position[]; enemies?: Position[] }
 
 export async function openGame(page: Page, layout: FieldLayout = {}): Promise<void> {
+  await page.clock.install();
   // Control initial generation, not DOM coordinates or a production test hook.
   await page.addInitScript(layout => {
     let sequence: number[] | undefined;
@@ -32,6 +33,43 @@ export async function openGame(page: Page, layout: FieldLayout = {}): Promise<vo
   await page.goto('./');
   await expect(page.locator('.item')).toHaveCount(10);
   await expect(page.locator('.enemy')).toHaveCount(6);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
+}
+
+export async function holdKey(page: Page, key: string, milliseconds: number): Promise<void> {
+  await page.keyboard.down(key);
+  await page.clock.runFor(milliseconds);
+  await page.keyboard.up(key);
+}
+
+export function position(page: Page) {
+  return page.locator('#player').evaluate(player => ({ x: parseFloat(player.style.left), y: parseFloat(player.style.top) }));
+}
+
+export async function touchInput(page: Page) {
+  const session = await page.context().newCDPSession(page);
+  const points = new Map<number, { id: number; x: number; y: number }>();
+  return {
+    async down(id: number, point: Position) {
+      points.set(id, { id, ...point });
+      await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [...points.values()] });
+    },
+    async move(id: number, point: Position) {
+      if (!points.has(id)) throw new Error('Touch point is missing');
+      points.set(id, { id, ...point });
+      await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [...points.values()] });
+    },
+    async up(id: number) {
+      const point = points.get(id);
+      if (!point) throw new Error('Touch point is missing');
+      points.delete(id);
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [point] });
+    },
+    async cancel() {
+      points.clear();
+      await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+    },
+  };
 }
 
 export async function expectFreshGame(page: Page): Promise<void> {

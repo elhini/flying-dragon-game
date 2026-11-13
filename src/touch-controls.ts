@@ -1,74 +1,76 @@
-import { isGameKey } from './input.ts';
-import type { KeyCode } from './input.ts';
+import { normalized } from './geometry.ts';
+import type { Point } from './geometry.ts';
 
 interface TouchOptions {
   isFinished: () => boolean;
-  onKeyDown: (code: KeyCode) => void;
-  onKeyUp: (code: KeyCode) => void;
+  onDirection: (direction: Point | null) => void;
+  onFire: () => void;
 }
 
-export function setupTouchControls({ isFinished, onKeyDown, onKeyUp }: TouchOptions) {
+export function setupTouchControls({ isFinished, onDirection, onFire }: TouchOptions) {
   const controls = document.querySelector<HTMLElement>('#touch-controls');
-  const activePointers = new Map<HTMLButtonElement, { code: KeyCode; pointerId: number; release: () => void }>();
-  let movementInterval: ReturnType<typeof setInterval> | null = null;
-  const reset = () => {
-    for (const { release } of [...activePointers.values()]) release();
-  };
-  const listeners = new AbortController();
-  const dispose = () => { reset(); listeners.abort(); };
-  if (!controls) throw new Error('Touch controls are missing');
-  if (!window.matchMedia('(pointer: coarse)').matches) {
-    return { reset, dispose };
+  const joystick = document.querySelector<HTMLElement>('#joystick');
+  const knob = document.querySelector<HTMLElement>('#joystick-knob');
+  const fire = document.querySelector<HTMLButtonElement>('.touch-fire');
+  if (!controls || !joystick || !knob || !fire) throw new Error('Touch controls are missing');
+  const events = new AbortController();
+  let stickOwner: number | null = null;
+  let fireOwner: number | null = null;
+  function releaseStick(): void {
+    const id = stickOwner;
+    stickOwner = null;
+    joystick!.classList.remove('pressed');
+    knob!.style.transform = 'translate(0px, 0px)';
+    if (id === null) return;
+    onDirection(null);
+    if (joystick!.hasPointerCapture(id)) joystick!.releasePointerCapture(id);
   }
+  function releaseFire(): void {
+    const id = fireOwner;
+    fireOwner = null;
+    fire!.classList.remove('pressed');
+    if (id !== null && fire!.hasPointerCapture(id)) fire!.releasePointerCapture(id);
+  }
+  function reset(): void { releaseStick(); releaseFire(); }
+  const dispose = () => { reset(); events.abort(); };
+  if (!window.matchMedia('(pointer: coarse)').matches) return { reset, dispose };
 
   controls.hidden = false;
-  controls.addEventListener('contextmenu', event => event.preventDefault(), { signal: listeners.signal });
-  const updateMovementLoop = () => {
-    const direction = [...activePointers.values()].find(active => active.code !== 32);
-    if (!direction) {
-      if (movementInterval !== null) clearInterval(movementInterval);
-      movementInterval = null;
-    } else if (movementInterval === null) {
-      // One keyboard event moves along every held direction once per tick.
-      movementInterval = setInterval(() => {
-        if (isFinished()) {
-          reset();
-          return;
-        }
-        const active = [...activePointers.values()].find(pointer => pointer.code !== 32);
-        if (active) onKeyDown(active.code);
-      }, 110);
-    }
-  };
-
-  controls.querySelectorAll<HTMLButtonElement>('[data-key]').forEach(button => {
-    const code = Number(button.dataset.key);
-    if (!isGameKey(code)) throw new Error('Invalid touch control key');
-    button.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      if (activePointers.has(button) || isFinished()) return;
-      button.setPointerCapture(event.pointerId);
-      const release = () => {
-        const active = activePointers.get(button);
-        if (!active) return;
-        activePointers.delete(button);
-        button.classList.remove('pressed');
-        onKeyUp(code);
-        updateMovementLoop();
-      };
-      activePointers.set(button, { code, pointerId: event.pointerId, release });
-      button.classList.add('pressed');
-      onKeyDown(code);
-      updateMovementLoop();
-    }, { signal: listeners.signal });
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
-      button.addEventListener(type, (event: Event) => {
-        const active = activePointers.get(button);
-        if (event instanceof PointerEvent && active?.pointerId === event.pointerId) active.release();
-      }, { signal: listeners.signal });
-    }
-  });
-
-  window.addEventListener('blur', reset, { signal: listeners.signal });
+  controls.addEventListener('contextmenu', event => event.preventDefault(), { signal: events.signal });
+  function steer(event: PointerEvent): void {
+    const rect = joystick!.getBoundingClientRect();
+    const delta = { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
+    const length = Math.hypot(delta.x, delta.y);
+    const direction = normalized(delta);
+    const radius = Math.max(0, (rect.width - knob!.offsetWidth) / 2 - 8);
+    const travel = Math.min(length, radius);
+    knob!.style.transform = `translate(${direction.x * travel}px, ${direction.y * travel}px)`;
+    onDirection(length <= 8 ? { x: 0, y: 0 } : direction);
+  }
+  joystick.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    if (stickOwner !== null || isFinished()) return;
+    stickOwner = event.pointerId;
+    joystick!.setPointerCapture(event.pointerId);
+    joystick!.classList.add('pressed');
+    steer(event);
+  }, { signal: events.signal });
+  joystick.addEventListener('pointermove', event => {
+    if (event.pointerId !== stickOwner) return;
+    if (isFinished()) releaseStick(); else steer(event);
+  }, { signal: events.signal });
+  fire.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    if (fireOwner !== null || isFinished()) return;
+    fireOwner = event.pointerId;
+    fire!.setPointerCapture(event.pointerId);
+    fire!.classList.add('pressed');
+    onFire();
+  }, { signal: events.signal });
+  for (const type of ['pointerup', 'pointercancel', 'lostpointercapture'] as const) {
+    joystick.addEventListener(type, event => { if (event.pointerId === stickOwner) releaseStick(); }, { signal: events.signal });
+    fire.addEventListener(type, event => { if (event.pointerId === fireOwner) releaseFire(); }, { signal: events.signal });
+  }
+  window.addEventListener('blur', reset, { signal: events.signal });
   return { reset, dispose };
 }

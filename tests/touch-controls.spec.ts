@@ -1,135 +1,134 @@
 import { test, expect } from '@playwright/test';
-import type { Page } from '@playwright/test';
-import { openGame } from './fixtures.ts';
+import { openGame, position, touchInput } from './fixtures.ts';
 
 test.use({ viewport: { width: 900, height: 900 }, hasTouch: true, isMobile: true });
+test.beforeEach(async ({ page }) => { await openGame(page); });
 
-test.beforeEach(async ({ page }) => {
-  await page.clock.install();
-  await openGame(page);
-  await expect(page.locator('.item')).toHaveCount(10);
-  await page.getByRole('button', { name: 'Закрыть подсказку' }).click();
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
-});
-
-function position(page: Page) {
-  return page.locator('#player').evaluate(element => ({
-    x: parseFloat(element.style.left), y: parseFloat(element.style.top),
-  }));
+async function center(page: import('@playwright/test').Page, selector = '#joystick') {
+  const box = (await page.locator(selector).boundingBox())!;
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
-
-async function touchInput(page: Page) {
-  const session = await page.context().newCDPSession(page);
-  const points = new Map<number, { id: number; x: number; y: number }>();
-  return {
-    async down(name: string, id: number, offset = 0) {
-      const box = await page.getByRole('button', { name, exact: true }).boundingBox();
-      if (!box) throw new Error('Touch button is missing');
-      points.set(id, { id, x: box.x + box.width / 2 + offset, y: box.y + box.height / 2 });
-      await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [...points.values()] });
-    },
-    async up(id: number) {
-      const point = points.get(id);
-      if (!point) throw new Error('Touch point is missing');
-      points.delete(id);
-      // Lift only this point; other fingers stay on their buttons.
-      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [point] });
-    },
-    async cancel() {
-      points.clear();
-      await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
-    },
-  };
-}
-
-test('holding one direction moves once per repeat tick and stops on release', async ({ page }) => {
+test('joystick replaces four buttons and dismisses help on touch', async ({ page }) => {
+  await expect(page.locator('#joystick')).toBeVisible();
+  await expect(page.locator('.touch-up, .touch-left, .touch-right, .touch-down')).toHaveCount(0);
+  await expect(page.locator('#game-controls-help')).toContainText('джойстиком');
   const touch = await touchInput(page);
-  const before = await position(page);
-  await touch.down('Вправо', 1);
-  expect(await position(page)).toEqual({ x: before.x + 20, y: before.y });
-  await page.clock.runFor(440);
-  expect(await position(page)).toEqual({ x: before.x + 100, y: before.y });
-  await touch.up(1);
-  await page.clock.runFor(440);
-  expect(await position(page)).toEqual({ x: before.x + 100, y: before.y });
-});
-
-test('holding two directions uses one shared repeat rate', async ({ page }) => {
-  const touch = await touchInput(page);
-  await touch.down('Вправо', 1);
-  await touch.down('Вверх', 2);
-  const before = await position(page);
-  await page.clock.runFor(440); // Four repeat ticks, 20 px per axis on each tick.
-  expect(await position(page)).toEqual({ x: before.x + 80, y: before.y - 80 });
-  await touch.up(2);
-  const remaining = await position(page);
-  await page.clock.runFor(220);
-  expect(await position(page)).toEqual({ x: remaining.x + 40, y: remaining.y });
+  await touch.down(1, await center(page));
+  await expect(page.locator('#game-help')).toBeHidden();
   await touch.up(1);
 });
-
-test('releasing a second finger on the same button keeps its owner active', async ({ page }) => {
+test('joystick supports an arbitrary angle and release stops flight', async ({ page }) => {
   const touch = await touchInput(page);
-  await touch.down('Вправо', 1, -5);
-  await touch.down('Вправо', 2, 5);
+  const origin = await center(page);
+  const before = await position(page);
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 36, y: origin.y - 18 });
+  await page.clock.runFor(500);
+  const after = await position(page);
+  expect((after.y - before.y) / (after.x - before.x)).toBeCloseTo(-0.5, 2);
+  expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeCloseTo(90, -1);
+  await touch.up(1);
+  await page.clock.runFor(500);
+  expect(await position(page)).toEqual(after);
+  await expect(page.locator('#joystick')).not.toHaveClass(/pressed/);
+  await expect(page.locator('#joystick-knob')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+});
+test('small center movements stay in the deadzone', async ({ page }) => {
+  const touch = await touchInput(page);
+  const origin = await center(page);
+  const before = await position(page);
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 3, y: origin.y + 3 });
+  await page.clock.runFor(500);
+  expect(await position(page)).toEqual(before);
+  await touch.up(1);
+});
+test('changing joystick angle continuously changes flight direction', async ({ page }) => {
+  const touch = await touchInput(page);
+  const origin = await center(page);
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 40, y: origin.y });
+  await page.clock.runFor(300);
+  const before = await position(page);
+  const previousTransform = await page.locator('#joystick-knob').evaluate(element => element.style.transform);
+  await touch.move(1, { x: origin.x + 10, y: origin.y - 40 });
+  await expect.poll(() => page.locator('#joystick-knob').evaluate(element => element.style.transform)).not.toBe(previousTransform);
+  await page.clock.runFor(300);
+  const after = await position(page);
+  expect((after.y - before.y) / (after.x - before.x)).toBeCloseTo(-4, 1);
+  await touch.up(1);
+});
+test('a second finger on the joystick cannot replace or release its owner', async ({ page }) => {
+  const touch = await touchInput(page);
+  const origin = await center(page);
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 40, y: origin.y });
+  await touch.down(2, { x: origin.x, y: origin.y - 30 });
   await touch.up(2);
   const before = await position(page);
-  await page.clock.runFor(220);
-  expect(await position(page)).toEqual({ x: before.x + 40, y: before.y });
-  await expect(page.getByRole('button', { name: 'Вправо', exact: true })).toHaveClass(/pressed/);
+  await page.clock.runFor(300);
+  expect((await position(page)).x - before.x).toBeCloseTo(54, -1);
+  await expect(page.locator('#joystick')).toHaveClass(/pressed/);
   await touch.up(1);
+});
+test('firing with a second finger preserves movement and its angle', async ({ page }) => {
+  const touch = await touchInput(page);
+  const origin = await center(page);
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 40, y: origin.y - 20 });
+  await touch.down(2, await center(page, '.touch-fire'));
+  await expect(page.locator('.fire')).toHaveCount(1);
+  const before = await position(page);
+  await page.clock.runFor(300);
+  expect((await position(page)).x).toBeGreaterThan(before.x + 40);
+  await touch.up(2);
   const released = await position(page);
-  await page.clock.runFor(220);
-  expect(await position(page)).toEqual(released);
-});
-
-test('cancelling a touch stops repeated movement', async ({ page }) => {
-  const touch = await touchInput(page);
-  await touch.down('Вправо', 1);
-  await touch.cancel();
-  const before = await position(page);
-  await page.clock.runFor(440);
-  expect(await position(page)).toEqual(before);
-  await expect(page.getByRole('button', { name: 'Вправо', exact: true })).not.toHaveClass(/pressed/);
-});
-
-test('firing and releasing fire leave the held direction repeating', async ({ page }) => {
-  const touch = await touchInput(page);
-  await touch.down('Вправо', 1);
-  await touch.down('Стрелять', 2);
-  await expect(page.locator('.fire')).toHaveCount(1);
-  const before = await position(page);
-  await page.clock.runFor(220);
-  expect(await position(page)).toEqual({ x: before.x + 40, y: before.y });
-  await touch.up(2);
-  const afterFire = await position(page);
-  await page.clock.runFor(220);
-  expect(await position(page)).toEqual({ x: afterFire.x + 40, y: afterFire.y });
+  await page.clock.runFor(300);
+  expect((await position(page)).x).toBeGreaterThan(released.x + 40);
   await touch.up(1);
 });
-
-test('losing focus releases physical and virtual keys', async ({ page }) => {
+for (const reason of ['cancel', 'blur', 'lostcapture']) {
+  test(`${reason} releases the joystick and stops movement`, async ({ page }) => {
+    const touch = await touchInput(page);
+    const origin = await center(page);
+    // Record the real pointer ID in the test context to release its capture.
+    const pointer = await page.locator('#joystick').evaluateHandle(element => {
+      const state = { id: 0 };
+      element.addEventListener('pointerdown', event => { state.id = (event as PointerEvent).pointerId; }, { once: true });
+      return state;
+    });
+    await touch.down(1, origin);
+    const owner = await pointer.evaluate(state => state.id);
+    expect(owner).toBeGreaterThan(0);
+    await pointer.dispose();
+    await touch.move(1, { x: origin.x + 40, y: origin.y });
+    await page.clock.runFor(200);
+    if (reason === 'cancel') await touch.cancel();
+    else if (reason === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    else {
+      await page.locator('#joystick').evaluate((element, id) => element.releasePointerCapture(id), owner);
+      // Capture changes are processed before the next native pointer event.
+      await touch.move(1, { x: origin.x + 41, y: origin.y });
+    }
+    await expect(page.locator('#joystick')).not.toHaveClass(/pressed/);
+    await page.clock.runFor(20);
+    const before = await position(page);
+    await page.clock.runFor(500);
+    expect(await position(page)).toEqual(before);
+    await expect(page.locator('#joystick')).not.toHaveClass(/pressed/);
+    if (reason !== 'cancel') await touch.up(1);
+  });
+}
+test('joystick release restores a physical key still held down', async ({ page }) => {
   const touch = await touchInput(page);
-  await page.keyboard.down('ArrowRight');
-  await touch.down('Вверх', 1);
+  const origin = await center(page);
+  await page.keyboard.down('ArrowLeft');
+  await touch.down(1, origin);
+  await touch.move(1, { x: origin.x + 40, y: origin.y });
+  await page.clock.runFor(200);
   const before = await position(page);
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-  await page.clock.runFor(440);
-  await page.keyboard.press('Space');
-  expect(await position(page)).toEqual(before);
-  await expect(page.locator('#touch-controls .pressed')).toHaveCount(0);
-  await expect(page.locator('.fire')).toHaveCount(1);
-  await page.keyboard.up('ArrowRight');
   await touch.up(1);
-});
-
-test('releasing touch preserves a matching physical key', async ({ page }) => {
-  const touch = await touchInput(page);
-  await page.keyboard.down('ArrowRight');
-  await touch.down('Вправо', 1);
-  await touch.up(1);
-  const before = await position(page);
-  await page.keyboard.press('ArrowUp');
-  expect(await position(page)).toEqual({ x: before.x + 20, y: before.y - 20 });
-  await page.keyboard.up('ArrowRight');
+  await page.clock.runFor(200);
+  expect((await position(page)).x).toBeLessThan(before.x - 30);
+  await page.keyboard.up('ArrowLeft');
 });
