@@ -17,8 +17,8 @@
         <div id="player-health-scale-text" class="scale-text"></div>
     </div>
     <aside id="game-help" class="game-hint" lang="ru" aria-label="Как играть">
-      Собери все 10 кристаллов и избегай врагов. Двигайся стрелками, стреляй пробелом.
-      Для новой игры обнови страницу. Нужна клавиатура.
+      Собери все 10 кристаллов и избегай врагов. Двигайся стрелками, стреляй пробелом
+      или кнопкой «Огонь». Для новой игры обнови страницу.
       <button id="close-game-help" type="button" aria-label="Закрыть подсказку">×</button>
     </aside>
     <aside id="game-over" class="game-hint" lang="ru" role="alert" hidden>
@@ -27,6 +27,15 @@
     <aside id="game-won" class="game-hint" lang="ru" role="status" hidden>
       Ты победил, поздравляю! Обнови страницу, чтобы начать заново
     </aside>
+    <nav id="touch-controls" aria-label="Управление драконом" hidden>
+      <div class="touch-pad" aria-label="Направление">
+        <button class="touch-button touch-up" type="button" data-key="38" aria-label="Вверх">↑</button>
+        <button class="touch-button touch-left" type="button" data-key="37" aria-label="Влево">←</button>
+        <button class="touch-button touch-right" type="button" data-key="39" aria-label="Вправо">→</button>
+        <button class="touch-button touch-down" type="button" data-key="40" aria-label="Вниз">↓</button>
+      </div>
+      <button class="touch-button touch-fire" type="button" data-key="32" aria-label="Стрелять">Огонь</button>
+    </nav>
     <script type="module" src="/src/index.js"></script>
   </body>
 </html>
