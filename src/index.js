@@ -45,6 +45,7 @@ $(document).ready(() => {
         e.currentTarget.blur();
         $('#game-help').prop('hidden', true);
     });
+    $('.game-restart').on('click', () => window.location.reload());
 
     var pressedCodes = {};
     

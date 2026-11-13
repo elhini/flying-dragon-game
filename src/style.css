@@ -70,6 +70,22 @@ body {
     background: rgb(0 0 0 / 8%);
 }
 
+.game-restart {
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+.game-restart:hover,
+.game-restart:focus-visible {
+    background: rgb(0 0 0 / 8%);
+}
+
 #player {
     width: min(200px, 70vmin);
     height: min(200px, 70vmin);

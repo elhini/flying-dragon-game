@@ -49,5 +49,12 @@ for (const outcome of ['death', 'victory']) {
     await page.evaluate(() => new Promise(requestAnimationFrame));
     expect(await controlGeometry(page)).toEqual(before);
     expect(await contextMenuCancelled(page.getByRole('button', { name: 'Стрелять', exact: true }))).toBe(true);
+    await Promise.all([
+      page.waitForEvent('load'),
+      page.getByRole('button', { name: 'Ещё раз', exact: true }).tap(),
+    ]);
+    await expect(page.locator('.item')).toHaveCount(10);
+    await expect(page.locator('#player-health-scale-text')).toHaveText('100 / 100');
+    await expect(page.locator('#game-help')).toBeVisible();
   });
 }

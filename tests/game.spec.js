@@ -181,7 +181,7 @@ for (const closeHelp of [false, true]) {
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('#items-scale-text')).toHaveText('10 / 10');
     await expect(page.locator('#game-won')).toBeVisible();
-    await expect(page.locator('#game-won')).toHaveText('Ты победил, поздравляю! Обнови страницу, чтобы начать заново');
+    await expect(page.locator('#game-won')).toHaveText('Ты победил, поздравляю! Чтобы начать заново, обнови страницу или нажми кнопку Ещё раз');
     await expect(page.locator('#game-help')).toBeHidden();
     await expect(page.locator('#game-over')).toBeHidden();
     const position = await page.locator('#player').evaluate(element => ({ left: element.style.left, top: element.style.top }));
@@ -189,6 +189,17 @@ for (const closeHelp of [false, true]) {
     await page.keyboard.press('Space');
     expect(await page.locator('#player').evaluate(element => ({ left: element.style.left, top: element.style.top }))).toEqual(position);
     await expect(page.locator('.fire')).toHaveCount(0);
+    const restart = page.getByRole('button', { name: 'Ещё раз', exact: true });
+    if (closeHelp) await restart.focus();
+    await Promise.all([
+      page.waitForEvent('load'),
+      closeHelp ? page.keyboard.press('Enter') : restart.click(),
+    ]);
+    await expect(page.locator('.item')).toHaveCount(10);
+    await expect(page.locator('#items-scale-text')).toHaveText('0 / 10');
+    await expect(page.locator('#player-health-scale-text')).toHaveText('100 / 100');
+    await expect(page.locator('#game-help')).toBeVisible();
+    await expect(page.locator('#game-won')).toBeHidden();
   });
 
   test(`shows the death message with the initial hint ${closeHelp ? 'closed' : 'open'}`, async ({ page }) => {
@@ -212,7 +223,18 @@ for (const closeHelp of [false, true]) {
     for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
     await expect(page.locator('#player-health-scale-text')).toHaveText('0 / 100');
     await expect(page.locator('#game-over')).toBeVisible();
-    await expect(page.locator('#game-over')).toHaveText('Твой дракон погиб. Обнови страницу, чтобы начать заново');
+    await expect(page.locator('#game-over')).toHaveText('Твой дракон погиб. Чтобы начать заново, обнови страницу или нажми кнопку Ещё раз');
     await expect(page.locator('#game-help')).toBeHidden();
+    const restart = page.getByRole('button', { name: 'Ещё раз', exact: true });
+    if (closeHelp) await restart.focus();
+    await Promise.all([
+      page.waitForEvent('load'),
+      closeHelp ? page.keyboard.press('Space') : restart.click(),
+    ]);
+    await expect(page.locator('.item')).toHaveCount(10);
+    await expect(page.locator('#player-health-scale-text')).toHaveText('100 / 100');
+    await expect(page.locator('#game-help')).toBeVisible();
+    await expect(page.locator('#game-over')).toBeHidden();
+    await expect(page.locator('.fire')).toHaveCount(0);
   });
 }
