@@ -28,6 +28,10 @@ worker.addEventListener('install', event => {
   })());
 });
 
+worker.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') event.waitUntil(worker.skipWaiting());
+});
+
 worker.addEventListener('activate', event => {
   event.waitUntil((async () => {
     for (const name of await caches.keys()) {

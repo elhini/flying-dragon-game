@@ -46,6 +46,26 @@ body {
     color: #2f6b43;
 }
 
+#update-game {
+    position: fixed;
+    top: 42px;
+    right: 12px;
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid #2b435c;
+    border-radius: 8px;
+    background: #2b435c;
+    color: white;
+    font: 14px/1.5 sans-serif;
+    cursor: pointer;
+    z-index: 3;
+}
+
+#update-game:hover,
+#update-game:focus-visible {
+    background: #405e7c;
+}
+
 #game-won {
     border-color: #81c784;
     background: rgb(232 245 233 / 94%);

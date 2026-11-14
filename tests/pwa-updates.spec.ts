@@ -52,6 +52,7 @@ test('a waiting update preserves games in every window and activates after they 
   await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
   const newWorker = await workerStarted;
   await expect.poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.waiting?.state)).toBe('installed');
+  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toBeVisible();
   expect(await originalDocument.evaluate(original => original === document)).toBe(true);
   await originalDocument.dispose();
   expect(await position(page)).toEqual(stopped);
@@ -60,6 +61,7 @@ test('a waiting update preserves games in every window and activates after they 
   await page.reload();
   await expectFreshGame(page);
   await expect(page).toHaveTitle('Dragon first');
+  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toBeVisible();
   const activated = await newWorker.evaluateHandle(() => {
     const state = { done: false };
     globalThis.addEventListener('activate', () => { state.done = true; }, { once: true });
@@ -77,6 +79,44 @@ test('a waiting update preserves games in every window and activates after they 
   expect(await launched.evaluate(async name => (await (await caches.open(name)).match('/neighbor/data'))?.text(), neighborCache)).toBe('neighbor data');
 });
 
+for (const touch of [false, true]) {
+  test.describe(touch ? 'touch update' : 'desktop update', () => {
+    test.use({ hasTouch: touch, viewport: touch ? { width: 420, height: 740 } : { width: 1280, height: 720 } });
+    test('the update button applies a downloaded release offline without reloading other games', async ({ page, context, releases }) => {
+      await page.goto(releases.url);
+      await expect(page.locator('#offline-status')).toBeVisible();
+      const update = page.getByRole('button', { name: 'Обновить', exact: true });
+      await expect(update).toBeHidden();
+      const otherGame = await context.newPage();
+      await otherGame.goto(releases.url);
+      await expect(otherGame.locator('#offline-status')).toBeVisible();
+      await page.bringToFront();
+      if (touch) await context.setOffline(true);
+      releases.publish();
+      if (touch) await context.setOffline(false);
+      else await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
+      await expect(update).toBeVisible();
+      await page.locator('#close-game-help').click();
+      await expect(update).toBeVisible();
+      await expect(page).toHaveTitle('Dragon first');
+      await context.setOffline(true);
+      let navigations = 0;
+      page.on('framenavigated', frame => { if (frame === page.mainFrame()) navigations++; });
+      if (touch) await update.tap(); else await update.click();
+      await expect(page).toHaveTitle('Dragon second');
+      await expectFreshGame(page);
+      await expect(page.locator('#offline-status')).toBeVisible();
+      await expect(update).toBeHidden();
+      expect(navigations).toBe(1);
+      await expect(otherGame).toHaveTitle('Dragon first');
+      await expect(otherGame.getByRole('button', { name: 'Обновить', exact: true })).toBeHidden();
+      await page.reload();
+      await expect(page).toHaveTitle('Dragon second');
+      await expectFreshGame(page);
+    });
+  });
+}
+
 test('a failed update leaves the previous version available for offline launch', async ({ page, context, releases }) => {
   await page.goto(releases.url);
   await expect(page.locator('#offline-status')).toBeVisible();
@@ -93,6 +133,7 @@ test('a failed update leaves the previous version available for offline launch',
     return state;
   });
   await expect.poll(() => observed.evaluate(state => state.failed)).toBe(true);
+  await expect(page.getByRole('button', { name: 'Обновить', exact: true })).toBeHidden();
   await observed.dispose();
   await context.setOffline(true);
   await page.close();
