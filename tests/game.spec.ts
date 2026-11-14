@@ -108,9 +108,9 @@ test('can still collect a gem at the left edge after resize', async ({ page }) =
 test('detects enemy damage at current positions after resize', async ({ page }) => {
   await openGame(page, { items: [{ x: 1100, y: 630 }], enemies: [{ x: 960, y: 300 }, ...Array.from({ length: 5 }, () => ({ x: 1100, y: 600 }))] });
   await resizeGame(page, { width: 640, height: 480 });
-  await holdKey(page, 'ArrowRight', 600);
+  await holdKey(page, 'ArrowRight', 300);
   await expect(page.locator('#player-health-scale-text')).toHaveText('100 / 100');
-  await holdKey(page, 'ArrowRight', 200);
+  await holdKey(page, 'ArrowRight', 100);
   await expect(page.locator('#player-health-scale-text')).toHaveText('95 / 100');
 });
 test('a fireball destroys an enemy at its current position after resize', async ({ page }) => {

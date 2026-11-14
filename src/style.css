@@ -104,22 +104,44 @@ body {
     z-index: 1;
 }
 
-#player.finished:after {
-    width: 300px;
-    height: 300px;
-    border-radius: 50%;
+#player::after,
+.enemy::after {
     position: absolute;
-    left: -50px;
-    top: -50px;
+    left: 50%;
+    top: 50%;
+    width: var(--danger-diameter);
+    height: var(--danger-diameter);
+    box-sizing: border-box;
+    transform: translate(-50%, -50%);
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    color: #e53935;
+    background: rgb(229 57 53 / 14%);
+    box-shadow: 0 0 8px rgb(229 57 53 / 55%);
+    pointer-events: none;
+    content: none;
+}
+
+#player.hitting::after,
+#player.finished::after,
+.enemy.hitting::after {
     content: '';
 }
 
-#player.won:after {
-    box-shadow: 0 0 10px green;
+#player.hitting::after,
+.enemy.hitting::after {
+    animation: danger-pulse 700ms ease-in-out infinite;
 }
 
-#player.dead:after {
-    box-shadow: 0 0 10px red;
+#player.won::after {
+    color: #2e7d32;
+    background: rgb(46 125 50 / 14%);
+    box-shadow: 0 0 8px rgb(46 125 50 / 55%);
+}
+
+@keyframes danger-pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
 }
 
 .item {
@@ -209,17 +231,6 @@ body {
 
 .enemy[data-type="3"] {
     background-image: url(./img/enemy-type-3.png);
-}
-
-.enemy.hitting:after {
-    width: 100px;
-    height: 100px;
-    box-shadow: 0 0 10px red;
-    border-radius: 50%;
-    position: absolute;
-    left: -15px;
-    top: -15px;
-    content: '';
 }
 
 .fire {

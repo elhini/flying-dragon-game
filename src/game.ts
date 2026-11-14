@@ -32,7 +32,14 @@ export interface GameState {
   helpVisible: boolean;
 }
 export interface Command { motion: Motion; fire: boolean; dismissHelp: boolean }
-export const RULES = { items: 10, enemies: 6, health: 100, damage: 5, damageIntervalMs: 250, playerHitRadiusRatio: 0.25, enemyHitRadiusRatio: 0.35, startClearance: 20, speed: 180, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
+export const RULES = { items: 10, enemies: 6, health: 100, damage: 5, damageIntervalMs: 250, playerHitRadiusRatio: 0.5, enemyHitRadiusRatio: 0.5, startClearance: 20, speed: 180, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
+
+export function dangerRadiiFor(sizes: ReturnType<typeof sizesFor>) {
+  return {
+    player: sizes.player.width * RULES.playerHitRadiusRatio,
+    enemy: sizes.enemy.width * RULES.enemyHitRadiusRatio,
+  };
+}
 
 export function createGame(viewport: Size, random: () => number = Math.random): GameState {
   const sizes = sizesFor(viewport);
@@ -132,6 +139,7 @@ export function applyCommand(state: GameState, command: Command): void {
 
 function contacts(state: GameState, elapsedMs: number): boolean {
   const sizes = sizesFor(state.viewport);
+  const radii = dangerRadiiFor(sizes);
   const playerBounds = bounds(state.player, sizes.player);
   const remaining = state.items.filter(item => !intersects(playerBounds, bounds(item, sizes.item)));
   let changed = remaining.length !== state.items.length;
@@ -141,9 +149,9 @@ function contacts(state: GameState, elapsedMs: number): boolean {
     enemy.hitCooldownMs = Math.max(0, enemy.hitCooldownMs - elapsedMs);
     const hitting = circlesIntersect(
       { x: state.player.x + sizes.player.width / 2, y: state.player.y + sizes.player.height / 2 },
-      sizes.player.width * RULES.playerHitRadiusRatio,
+      radii.player,
       { x: enemy.x + sizes.enemy.width / 2, y: enemy.y + sizes.enemy.height / 2 },
-      sizes.enemy.width * RULES.enemyHitRadiusRatio,
+      radii.enemy,
     );
     if (hitting !== enemy.hitting) changed = true;
     enemy.hitting = hitting;

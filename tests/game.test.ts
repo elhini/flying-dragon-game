@@ -59,19 +59,26 @@ test('rotating before the first interaction keeps the starting area empty', () =
   assert.equal(state.player.health, 100);
 });
 
-test('touching a wing does not cause damage but body contact does at every angle', () => {
-  for (const angle of [0, 45, 90, 147]) {
-    const state = fixture();
-    Object.assign(state.player, { angle, targetAngle: angle });
-    Object.assign(state.enemies[0]!, { x: 265, y: 165 });
-    steer(state, 0, 0);
-    advanceGame(state, 1);
-    assert.equal(state.player.health, 100);
-    assert.equal(state.enemies[0]!.hitting, false);
-    Object.assign(state.enemies[0]!, { x: 220, y: 165 });
-    advanceGame(state, 1);
-    assert.equal(state.player.health, 95);
-    assert.equal(state.enemies[0]!.hitting, true);
+test('200px player and 70px enemy damage circles touch at 135px, scaling with small screens', () => {
+  for (const [viewport, enemyX, enemyY] of [
+    [{ width: 1280, height: 720 }, 300, 165],
+    // At 240x240 the sprites are 84px and 35px; contact is at 59.5px.
+    [{ width: 240, height: 240 }, 184, 124.5],
+  ] as const) {
+    for (const angle of [0, 45, 90, 147]) {
+      const state = fixture();
+      state.viewport = { ...viewport };
+      Object.assign(state.player, { angle, targetAngle: angle });
+      Object.assign(state.enemies[0]!, { x: enemyX + 0.01, y: enemyY });
+      steer(state, 0, 0);
+      advanceGame(state, 1);
+      assert.equal(state.player.health, 100);
+      assert.equal(state.enemies[0]!.hitting, false);
+      state.enemies[0]!.x = enemyX;
+      advanceGame(state, 1);
+      assert.equal(state.player.health, 95);
+      assert.equal(state.enemies[0]!.hitting, true);
+    }
   }
 });
 

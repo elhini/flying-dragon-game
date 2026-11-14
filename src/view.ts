@@ -1,4 +1,4 @@
-import { RULES } from './game.ts';
+import { RULES, dangerRadiiFor } from './game.ts';
 import type { GameState, Sprite } from './game.ts';
 import { sizesFor } from './geometry.ts';
 import type { Point, Size } from './geometry.ts';
@@ -53,11 +53,14 @@ export function createView() {
   return {
     render(state: GameState): void {
       const sizes = sizesFor(state.viewport);
+      const radii = dangerRadiiFor(sizes);
       place(player, state.player, sizes.player);
+      player.style.setProperty('--danger-diameter', `${2 * radii.player}px`);
       player.style.transform = `rotate(${state.player.angle}deg)`;
       player.classList.toggle('finished', state.status !== 'playing');
       player.classList.toggle('dead', state.status === 'dead');
       player.classList.toggle('won', state.status === 'won');
+      player.classList.toggle('hitting', state.enemies.some(enemy => enemy.hitting));
       help.hidden = !state.helpVisible;
       won.hidden = state.status !== 'won';
       dead.hidden = state.status !== 'dead';
@@ -68,6 +71,7 @@ export function createView() {
       sync(items, state.items, 'item', (node, item) => sprite(node, item, sizes.item));
       sync(enemies, state.enemies, 'enemy', (node, enemy) => {
         sprite(node, enemy, sizes.enemy);
+        node.style.setProperty('--danger-diameter', `${2 * radii.enemy}px`);
         node.style.transform = `rotate(${enemy.angle}deg)`;
         node.classList.toggle('hitting', enemy.hitting);
       });
