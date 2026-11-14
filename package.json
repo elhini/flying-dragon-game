@@ -15,7 +15,7 @@
     "dev": "vite --host 127.0.0.1",
     "start:dev": "npm run dev",
     "preview": "vite preview --host 127.0.0.1",
-    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
+    "check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json"
   },
   "keywords": [
     "flying",

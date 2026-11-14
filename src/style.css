@@ -41,6 +41,11 @@ body {
     padding-right: 56px;
 }
 
+#offline-status:not([hidden]) {
+    display: block;
+    color: #2f6b43;
+}
+
 #game-won {
     border-color: #81c784;
     background: rgb(232 245 233 / 94%);

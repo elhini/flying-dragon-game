@@ -29,6 +29,42 @@ def package(release_id='a' * 32):
 
 
 class DeploymentTest(unittest.TestCase):
+    def test_pwa_files_are_published_and_rolled_back_with_the_game(self):
+        value = package()
+        names = ['manifest.webmanifest', 'sw.js', 'favicon.ico', 'favicon.png',
+                 'pwa-icon-192.png', 'pwa-icon-512.png', 'pwa-maskable-512.png', 'apple-touch-icon.png']
+        for name in names:
+            content = ('new ' + name).encode()
+            value['files'][name] = {'content': base64.b64encode(content).decode(), 'sha256': hashlib.sha256(content).hexdigest()}
+        result = receiver.apply_release(value, str(self.web), str(self.state))
+        self.assertEqual(result['verified_files'], 12)
+        for name in names:
+            self.assertEqual((self.web / name).read_bytes(), ('new ' + name).encode())
+        receiver.rollback_release('a' * 32, str(self.web), str(self.state))
+        self.assertEqual(self.snapshot(), self.original)
+
+    def test_pwa_allowlist_does_not_allow_arbitrary_root_files(self):
+        for name in ['other.js', 'other.webmanifest', 'sw.js/extra', '../sw.js', '.htaccess', 'pwa-icon-192.png.php']:
+            with self.subTest(name=name):
+                value = package()
+                value['files'][name] = value['files']['index.html']
+                with self.assertRaises(ValueError): receiver.apply_release(value, str(self.web), str(self.state))
+                self.assertEqual(self.snapshot(), self.original)
+
+    def test_worker_is_published_after_the_html_and_assets_it_precaches(self):
+        value = package()
+        content = b'new worker'
+        value['files']['sw.js'] = {'content': base64.b64encode(content).decode(), 'sha256': hashlib.sha256(content).hexdigest()}
+        installed = []
+        rename = receiver.os.rename
+        def observe(source, target):
+            if '/stage/' in str(source):
+                installed.append(Path(target).relative_to(self.web).as_posix())
+            return rename(source, target)
+        with patch.object(receiver.os, 'rename', side_effect=observe):
+            receiver.apply_release(value, str(self.web), str(self.state))
+        self.assertEqual(installed[-1], 'sw.js')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

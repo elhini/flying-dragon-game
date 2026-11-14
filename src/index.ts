@@ -4,6 +4,9 @@ import { createInput, setupKeyboard } from './input.ts';
 import { setupTouchControls } from './touch-controls.ts';
 import { setupPointerControls } from './pointer-controls.ts';
 import { createView, element } from './view.ts';
+import { setupPwa } from './pwa.ts';
+
+const removePwa = setupPwa();
 
 const viewport = () => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight });
 let state = createGame(viewport());
@@ -71,4 +74,5 @@ if (import.meta.hot) import.meta.hot.dispose(() => {
   removeKeyboard();
   touch.dispose();
   pointer.dispose();
+  removePwa();
 });

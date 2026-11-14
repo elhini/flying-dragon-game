@@ -12,6 +12,8 @@ import sys
 
 MAX_PAYLOAD = 4 * 1024 * 1024
 ASSET_PATH = re.compile(r'^assets/[A-Za-z0-9][A-Za-z0-9._-]*[.](js|css|png|svg|jpg|jpeg|webp|gif|ico)\Z')
+ROOT_FILES = frozenset(['index.html', 'manifest.webmanifest', 'sw.js', 'favicon.ico', 'favicon.png',
+                       'pwa-icon-192.png', 'pwa-icon-512.png', 'pwa-maskable-512.png', 'apple-touch-icon.png'])
 
 
 def digest(content):
@@ -52,8 +54,8 @@ def decode_package(package):
         raise ValueError('The game JavaScript is missing')
     contents = {}
     for name, item in files.items():
-        if name != 'index.html' and not ASSET_PATH.match(name):
-            raise ValueError('Only index.html and static assets are allowed')
+        if name not in ROOT_FILES and not ASSET_PATH.match(name):
+            raise ValueError('Only approved game files and static assets are allowed')
         content = base64.b64decode(item['content'].encode('ascii'))
         if digest(content) != item['sha256']:
             raise ValueError('Package checksum mismatch')
@@ -141,8 +143,8 @@ def apply_release(package, web, state):
         # Persist recovery data before touching the web root, including for SIGKILL.
         write_file(os.path.join(directory, 'receipt.json'), json.dumps(receipt).encode('utf-8'))
         mark_pending(state, release_id)
-        # Assets first: both old and new HTML can load their matching CSS.
-        ordered = sorted(receipt['after'], key=lambda name: (name.endswith('.html'), name))
+        # Publish the worker last, after the HTML and assets it precaches.
+        ordered = sorted(receipt['after'], key=lambda name: (name == 'sw.js', name.endswith('.html'), name))
         for name in ordered:
             path = target_path(web, name)
             parent = os.path.dirname(path)

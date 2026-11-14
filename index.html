@@ -3,7 +3,12 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#2b435c">
+    <link rel="manifest" href="./manifest.webmanifest">
     <title>Flying Dragon</title>
+    <link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48">
+    <link rel="icon" type="image/png" href="./favicon.png" sizes="256x256">
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" sizes="180x180">
   </head>
   <body>
     <div id="player"></div>
@@ -19,6 +24,7 @@
     <aside id="game-help" class="game-hint" lang="ru" aria-label="Как играть">
       Собери все 10 кристаллов и избегай врагов.
       <span id="game-controls-help">Зажми левую кнопку мыши, чтобы лететь к курсору, или используй стрелки. Стреляй пробелом.</span>
+      <span id="offline-status" role="status" hidden></span>
       <button id="close-game-help" type="button" aria-label="Закрыть подсказку">×</button>
     </aside>
     <aside id="game-over" class="game-hint" lang="ru" role="alert" hidden>
