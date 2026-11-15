@@ -33,7 +33,7 @@ export interface GameState {
   helpVisible: boolean;
 }
 export interface Command { motion: Motion; fire: boolean; dismissHelp: boolean }
-export const RULES = { items: 10, enemies: 6, health: 100, damage: 5, damageIntervalMs: 250, playerHitRadiusRatio: 0.5, enemyHitRadiusRatio: 0.5, startClearance: 20, speed: 180, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
+export const RULES = { items: 10, enemies: 6, health: 100, damage: 5, damageIntervalMs: 250, playerHitRadiusRatio: 0.5, enemyHitRadiusRatio: 0.5, startClearance: 20, speed: 180, enemySpeed: 60, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
 
 export function dangerRadiiFor(sizes: ReturnType<typeof sizesFor>) {
   return {
@@ -139,6 +139,27 @@ export function applyCommand(state: GameState, command: Command): void {
   }
 }
 
+function advanceEnemies(state: GameState, elapsedMs: number): boolean {
+  const sizes = sizesFor(state.viewport);
+  const radii = dangerRadiiFor(sizes);
+  const reach = radii.player + radii.enemy;
+  const center = { x: state.player.x + sizes.player.width / 2, y: state.player.y + sizes.player.height / 2 };
+  let changed = false;
+  for (const enemy of state.enemies) {
+    const vector = { x: center.x - enemy.x - sizes.enemy.width / 2, y: center.y - enemy.y - sizes.enemy.height / 2 };
+    const distance = Math.hypot(vector.x, vector.y);
+    if (distance <= reach) continue;
+    // Stop just inside contact range so rounding cannot prevent an attack.
+    const travel = Math.min(RULES.enemySpeed * elapsedMs / 1000, distance - reach + 0.0000001);
+    const before = { x: enemy.x, y: enemy.y };
+    enemy.x += vector.x / distance * travel;
+    enemy.y += vector.y / distance * travel;
+    fit(enemy, sizes.enemy, state.viewport, true);
+    changed = changed || enemy.x !== before.x || enemy.y !== before.y;
+  }
+  return changed;
+}
+
 function contacts(state: GameState, elapsedMs: number): boolean {
   const sizes = sizesFor(state.viewport);
   const radii = dangerRadiiFor(sizes);
@@ -217,10 +238,11 @@ function step(state: GameState, elapsedMs: number): boolean {
   }
   fitPlayer(state);
   const moved = player.x !== before.x || player.y !== before.y;
-  if (moved) facePlayer(state);
+  const enemiesMoved = advanceEnemies(state, elapsedMs);
+  if (moved || enemiesMoved) facePlayer(state);
   const contactChanged = contacts(state, elapsedMs);
   const fireChanged = state.status === 'playing' && advanceFires(state, elapsedMs);
-  return moved || player.angle !== before.angle || contactChanged || fireChanged;
+  return moved || enemiesMoved || player.angle !== before.angle || contactChanged || fireChanged;
 }
 
 export function advanceGame(state: GameState, elapsedMs: number): boolean {

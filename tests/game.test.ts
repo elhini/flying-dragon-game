@@ -82,7 +82,8 @@ test('200px player and 70px enemy damage circles touch at 135px, scaling with sm
       Object.assign(state.player, { angle, targetAngle: angle });
       Object.assign(state.enemies[0]!, { x: enemyX + 0.01, y: enemyY });
       steer(state, 0, 0);
-      advanceGame(state, 1);
+      // Inspect the contact boundary before pursuit can cover the 0.01px gap.
+      advanceGame(state, 0.001);
       assert.equal(state.player.health, 100);
       assert.equal(state.enemies[0]!.hitting, false);
       state.enemies[0]!.x = enemyX;
