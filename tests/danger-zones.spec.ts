@@ -35,7 +35,7 @@ test('contact reveals both exact danger circles and opacity pulses without resiz
     expect(ring.centerX).toBe(diameter / 2);
     expect(ring.centerY).toBe(diameter / 2);
     const samples = await node.evaluate(element => {
-      const animation = element.getAnimations({ subtree: true }).find(animation => animation instanceof CSSAnimation)!;
+      const animation = element.getAnimations({ subtree: true }).find(animation => animation instanceof CSSAnimation && animation.animationName === 'danger-pulse')!;
       animation.pause();
       const sample = (time: number) => {
         animation.currentTime = time;

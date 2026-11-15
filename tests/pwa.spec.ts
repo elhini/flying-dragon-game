@@ -48,7 +48,7 @@ test('offline reload and a new launch retain images, flight, fire and restart', 
   await page.reload();
   await expectFreshGame(page);
   await expect(page.locator('#offline-status')).toBeVisible();
-  const images = await page.locator('#player, .item, .enemy').evaluateAll(async elements => {
+  const images = await page.locator('.dragon-part, .item, .enemy').evaluateAll(async elements => {
     const urls = [...new Set(elements.map(element => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]))];
     return Promise.all(urls.map(async url => {
       const image = new Image();
