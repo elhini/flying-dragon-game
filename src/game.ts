@@ -20,6 +20,7 @@ export interface Fire extends Point {
 export type Motion = { kind: 'direction'; vector: Point } | { kind: 'target'; point: Point };
 export interface GameState {
   viewport: Size;
+  terrain: 'grass' | 'earth' | 'stone';
   player: Player;
   motion: Motion;
   started: boolean;
@@ -59,6 +60,7 @@ export function createGame(viewport: Size, random: () => number = Math.random): 
     motion: { kind: 'direction', vector: { x: 0, y: 0 } }, started: false,
     items: spawn(RULES.items, 30),
     enemies: spawn(RULES.enemies, 70).map(enemy => ({ ...enemy, angle: 0, hitting: false, hitCooldownMs: 0 })),
+    terrain: (['grass', 'earth', 'stone'] as const)[integer(0, 2)]!,
     fires: [], nextFireId: 1, collected: 0, status: 'playing', helpVisible: true,
   };
   fit(state.player, sizes.player, viewport);

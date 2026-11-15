@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 interface Position { x: number; y: number }
-export interface FieldLayout { items?: Position[]; enemies?: Position[] }
+export interface FieldLayout { items?: Position[]; enemies?: Position[]; terrain?: number }
 
 export async function openGame(page: Page, layout: FieldLayout = {}): Promise<void> {
   await page.clock.install();
@@ -26,6 +26,7 @@ export async function openGame(page: Page, layout: FieldLayout = {}): Promise<vo
               positionValue(position.y, 30, Math.max(30, innerHeight - side)));
           }
         }
+        sequence.push(layout.terrain ?? 0.5);
       }
       return sequence[i++ % sequence.length]!;
     };

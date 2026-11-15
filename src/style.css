@@ -18,6 +18,29 @@ body {
     touch-action: none;
 }
 
+#field {
+    position: absolute;
+    inset: 0;
+    background-color: #f8faf6;
+    /* Wash only the terrain; sprites and danger circles keep their colors. */
+    background-image: linear-gradient(rgb(248 250 246 / var(--terrain-wash, 65%)), rgb(248 250 246 / var(--terrain-wash, 65%))), var(--terrain-image);
+    background-size: auto, 256px 256px;
+    background-repeat: repeat;
+}
+
+#field[data-terrain="grass"] {
+    --terrain-image: url(./img/backgrounds/grass-tile.jpg);
+}
+
+#field[data-terrain="earth"] {
+    --terrain-image: url(./img/backgrounds/earth-tile.jpg);
+    --terrain-wash: 40%;
+}
+
+#field[data-terrain="stone"] {
+    --terrain-image: url(./img/backgrounds/stone-tile.jpg);
+}
+
 .game-hint {
     position: fixed;
     right: 12px;
@@ -189,6 +212,7 @@ body {
     width: 50%;
     height: 30px;
     border: 1px solid gray;
+    background: rgb(255 255 255 / 90%);
 }
 
 .scale-fill {

@@ -52,6 +52,7 @@ export function createView() {
 
   return {
     render(state: GameState): void {
+      field.dataset.terrain = state.terrain;
       const sizes = sizesFor(state.viewport);
       const radii = dangerRadiiFor(sizes);
       place(player, state.player, sizes.player);

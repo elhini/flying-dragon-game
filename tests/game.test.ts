@@ -27,6 +27,17 @@ test('creation is deterministic and independent of DOM', () => {
   assert.equal(state.status, 'playing');
 });
 
+test('each new game chooses a terrain and keeps it during play and resize', () => {
+  for (const [random, terrain] of [[0, 'grass'], [0.5, 'earth'], [0.999, 'stone']] as const) {
+    const state = createGame({ width: 1280, height: 720 }, () => random);
+    assert.equal(state.terrain, terrain);
+    steer(state, 1, 0);
+    advanceGame(state, 100);
+    resizeGame(state, { width: 720, height: 1280 });
+    assert.equal(state.terrain, terrain);
+  }
+});
+
 test('the initial area is empty even when random repeatedly chooses the center', () => {
   for (const [width, height, margin] of [[1280, 720, 20], [390, 844, 19.5], [240, 240, 12], [80, 60, 3], [120, 900, 6], [337, 49, 2.45]] as const) {
     let calls = 0;
