@@ -145,13 +145,24 @@ body {
     z-index: 1;
 }
 
+.dragon-sprite,
 .dragon-part {
     position: absolute;
     inset: 0;
-    background-image: url(./img/player.png);
-    background-size: 100%;
     background-repeat: no-repeat;
     pointer-events: none;
+}
+
+.dragon-sprite {
+    background-image: url(./img/animations/dragon-flight.gif);
+    /* Compensate for the transparent margins around the generated frames. */
+    background-size: 108% 108%;
+    background-position: center;
+}
+
+.dragon-part {
+    background-image: url(./img/player.png);
+    background-size: 100%;
 }
 
 /* Overlap the joints beneath the body so the original sprite stays connected. */
@@ -196,8 +207,13 @@ body {
     animation-play-state: paused;
 }
 
+#player.dead .dragon-sprite {
+    background-image: url(./img/animations/dragon-flight-still.png);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dragon-part { animation: none; }
+    .dragon-sprite { background-image: url(./img/animations/dragon-flight-still.png); }
 }
 
 #player::after,

@@ -53,7 +53,7 @@ test('loads all game assets from a subdirectory and supports held keyboard input
   page.on('response', response => {
     if (response.status() >= 400 && !response.url().endsWith('/favicon.ico')) failures.push(`${response.status()} ${response.url()}`);
     const path = new URL(response.url()).pathname;
-    if (/\.(js|css|png)$/.test(path)) resources.add(path);
+    if (/\.(js|css|png|gif)$/.test(path)) resources.add(path);
   });
   await openGame(page);
   const before = await position(page);
@@ -67,7 +67,7 @@ test('loads all game assets from a subdirectory and supports held keyboard input
   await page.clock.runFor(6000);
   await expect(page.locator('.fire')).toHaveCount(0);
   expect(failures).toEqual([]);
-  await expect.poll(() => [...resources].filter(path => path.endsWith('.png')).length).toBe(7);
+  await expect.poll(() => [...resources].filter(path => /\.(png|gif)$/.test(path)).length).toBe(7);
   expect([...resources].every(path => path.startsWith(new URL(page.url()).pathname))).toBe(true);
 });
 test('keeps the current game and all objects visible after shrinking and growing', async ({ page }) => {

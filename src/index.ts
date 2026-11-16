@@ -11,7 +11,8 @@ const removePwa = setupPwa();
 const viewport = () => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight });
 let state = createGame(viewport());
 let previous: number | undefined;
-const view = createView();
+const animation = new URLSearchParams(window.location.search).get('animation') === 'css' ? 'css' : 'gif';
+const view = createView(animation);
 const input = createInput(command => {
   if (state.status !== 'playing') return;
   applyCommand(state, command);
