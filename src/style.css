@@ -145,66 +145,22 @@ body {
     z-index: 1;
 }
 
-.dragon-sprite,
-.dragon-part {
+.dragon-sprite {
     position: absolute;
     inset: 0;
-    background-repeat: no-repeat;
-    pointer-events: none;
-}
-
-.dragon-sprite {
     background-image: url(./img/animations/dragon-flight.gif);
+    background-repeat: no-repeat;
     /* Compensate for the transparent margins around the generated frames. */
     background-size: 108% 108%;
     background-position: center;
+    pointer-events: none;
 }
 
-.dragon-part {
-    background-image: url(./img/player.png);
-    background-size: 100%;
-}
-
-/* Overlap the joints beneath the body so the original sprite stays connected. */
-.dragon-body {
-    clip-path: polygon(46% 0, 58% 0, 58% 20%, 55% 25%, 55.5% 48%, 54% 56%, 49% 56%, 48% 48%, 48.5% 25%, 46% 20%);
-}
-
-.dragon-wing-left {
-    clip-path: polygon(0 17%, 45% 17%, 51% 27%, 51% 51%, 44% 56%, 0 56%);
-    transform-origin: 51% 32%;
-    animation: dragon-wing-left 850ms ease-in-out infinite;
-}
-
-.dragon-wing-right {
-    clip-path: polygon(54% 27%, 60% 17%, 100% 17%, 100% 56%, 60% 56%, 54% 50%);
-    transform-origin: 54% 32%;
-    animation: dragon-wing-right 850ms ease-in-out infinite;
-}
-
-.dragon-tail {
-    clip-path: inset(54% 39% 0 47%);
-    transform-origin: 51.5% 54%;
-    animation: dragon-tail 1700ms ease-in-out infinite;
-}
-
-@keyframes dragon-wing-left {
-    0%, 100% { transform: scaleX(1) skewY(-2deg); }
-    50% { transform: scaleX(0.62) skewY(10deg); }
-}
-
-@keyframes dragon-wing-right {
-    0%, 100% { transform: scaleX(1) skewY(2deg); }
-    50% { transform: scaleX(0.62) skewY(-10deg); }
-}
-
-@keyframes dragon-tail {
-    0%, 100% { transform: rotate(-3deg); }
-    50% { transform: rotate(3deg); }
-}
-
-#player.dead .dragon-part {
-    animation-play-state: paused;
+/* Browsers without image-set() type() support keep the GIF. */
+@supports (background-image: image-set(url("data:,") type("image/webp"))) {
+    .dragon-sprite {
+        background-image: image-set(url(./img/animations/dragon-flight.webp) type("image/webp"), url(./img/animations/dragon-flight.gif) type("image/gif"));
+    }
 }
 
 #player.dead .dragon-sprite {
@@ -212,7 +168,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dragon-part { animation: none; }
     .dragon-sprite { background-image: url(./img/animations/dragon-flight-still.png); }
 }
 

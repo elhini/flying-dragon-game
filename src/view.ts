@@ -13,17 +13,8 @@ function place(node: HTMLElement, point: Point, size: Size): void {
   Object.assign(node.style, { left: `${point.x}px`, top: `${point.y}px`, width: `${size.width}px`, height: `${size.height}px` });
 }
 
-export function createView(animation: 'css' | 'gif' = 'gif') {
+export function createView() {
   const player = element('#player');
-  const parts = animation === 'css'
-    ? ['dragon-part dragon-wing-left', 'dragon-part dragon-wing-right', 'dragon-part dragon-tail', 'dragon-part dragon-body']
-    : ['dragon-sprite'];
-  player.replaceChildren(...parts.map(className => {
-    const part = document.createElement('span');
-    part.className = className;
-    part.setAttribute('aria-hidden', 'true');
-    return part;
-  }));
   const field = element('#field');
   const help = element('#game-help');
   const won = element('#game-won');

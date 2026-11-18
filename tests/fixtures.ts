@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
 interface Position { x: number; y: number }
-export interface FieldLayout { items?: Position[]; enemies?: Position[]; terrain?: number; animation?: string }
+export interface FieldLayout { items?: Position[]; enemies?: Position[]; terrain?: number }
 
 export async function openGame(page: Page, layout: FieldLayout = {}): Promise<void> {
   await page.clock.install();
@@ -31,7 +31,7 @@ export async function openGame(page: Page, layout: FieldLayout = {}): Promise<vo
       return sequence[i++ % sequence.length]!;
     };
   }, layout);
-  await page.goto(layout.animation === undefined ? './' : `./?${new URLSearchParams({ animation: layout.animation })}`);
+  await page.goto('./');
   await expect(page.locator('.item')).toHaveCount(10);
   await expect(page.locator('.enemy')).toHaveCount(6);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
