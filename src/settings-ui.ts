@@ -24,8 +24,8 @@ export function setupSettings(onStart: (settings: GameSettings) => void) {
   function render(settings: GameSettings): void {
     const labels = {
       enemyCount: String(settings.enemyCount),
-      enemySpeed: settings.enemySpeed === 0 ? '0' : `${Math.round(settings.enemySpeed / DEFAULT_SETTINGS.enemySpeed * 100)}%`,
-      enemyDamage: String(settings.enemyDamage),
+      enemySpeed: `${Math.round(settings.enemySpeed / DEFAULT_SETTINGS.enemySpeed * 100)}%`,
+      enemyDamage: `${Math.round(settings.enemyDamage / DEFAULT_SETTINGS.enemyDamage * 100)}%`,
     };
     for (const key of Object.keys(fields) as (keyof GameSettings)[]) {
       fields[key].value = String(settings[key]);

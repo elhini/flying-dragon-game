@@ -25,11 +25,18 @@ test('settings are shown before play and slider keys cannot move the dragon', as
 
 test('presets set all three sliders and the selected settings survive an offline reload', async ({ page, context }) => {
   await page.goto('./');
-  for (const [name, expected] of [['Спокойный', [0, 0, 0]], ['Лёгкий', [3, 30, 2]], ['Обычный', [6, 60, 5]]] as const) {
+  for (const [name, expected, percentages] of [
+    ['Спокойный', [0, 0, 0], ['0%', '0%']],
+    ['Лёгкий', [3, 30, 2], ['50%', '40%']],
+    ['Обычный', [6, 60, 5], ['100%', '100%']],
+  ] as const) {
     const button = page.getByRole('button', { name, exact: true });
     await button.click();
     expect(await values(page)).toEqual(expected);
     await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#enemy-speed-value, #enemy-damage-value')).toHaveText([...percentages]);
+    await expect(page.locator('#enemy-speed')).toHaveAttribute('aria-valuetext', percentages[0]);
+    await expect(page.locator('#enemy-damage')).toHaveAttribute('aria-valuetext', percentages[1]);
   }
   await page.getByRole('button', { name: 'Лёгкий', exact: true }).click();
   await page.getByRole('button', { name: 'Играть', exact: true }).click();
