@@ -42,11 +42,8 @@ npm run dev
 
 ## Проверки
 
-Перед первым запуском браузерных тестов установи Chromium:
-
-```sh
-npx playwright install chromium
-```
+При `npm test` автоматически устанавливается Chromium, соответствующий версии Playwright из `package-lock.json`.
+После `npm ci` локальные тесты и CI используют одну версию браузера.
 
 На Linux может понадобиться `npx playwright install --with-deps chromium`.
 Для тестов публикации нужен Python 3.

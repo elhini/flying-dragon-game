@@ -9,12 +9,10 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   use: {
+    browserName: 'chromium',
     baseURL,
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
-    launchOptions: process.env.PLAYWRIGHT_EXECUTABLE_PATH
-      ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }
-      : {},
   },
   webServer: externalURL ? undefined : {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort --base /games/flying-dragon/',

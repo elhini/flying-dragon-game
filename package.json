@@ -8,6 +8,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "pretest": "playwright install chromium",
     "test": "playwright test",
     "test:unit": "node --test tests/*.test.ts",
     "test:deploy": "python3 -m unittest discover -s tests -p '*_test.py'",
