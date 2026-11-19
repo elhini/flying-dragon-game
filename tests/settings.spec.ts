@@ -90,7 +90,7 @@ for (const unavailable of [false, true]) {
 
 test.describe('mobile settings', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
-  test('sliders respond to touch and settings fit a short landscape screen', async ({ page }) => {
+  test('sliders respond to touch and settings fit after rotation', async ({ page }) => {
     await page.goto('./');
     await expect(dialog(page)).toBeVisible();
     const strength = page.getByRole('slider', { name: 'Сила удара' });
@@ -102,22 +102,36 @@ test.describe('mobile settings', () => {
     expect(Number(await strength.inputValue())).toBeLessThan(5);
     await expect(dialog(page)).toBeVisible();
     await page.setViewportSize({ width: 844, height: 390 });
+    await expect(dialog(page)).toBeInViewport({ ratio: 1 });
     const panel = (await dialog(page).boundingBox())!;
     expect(panel.y).toBeGreaterThanOrEqual(0);
     expect(panel.y + panel.height).toBeLessThanOrEqual(390);
-    // Scroll using a real touch gesture, not Playwright's automatic scrollIntoView.
-    const scrollStart = await dialog(page).evaluate(node => node.scrollTop);
-    const session = await page.context().newCDPSession(page);
-    await session.send('Input.synthesizeScrollGesture', {
-      x: panel.x + panel.width - 12, y: panel.y + panel.height - 30,
-      yDistance: -(panel.height - 60), gestureSourceType: 'touch',
+  });
+
+  // Start in landscape: Chromium's mobile emulation can drop scroll gestures
+  // after a viewport resize. Rotation geometry is covered separately above.
+  test.describe('landscape settings', () => {
+    test.use({ viewport: { width: 844, height: 390 } });
+    test('a touch swipe reveals Play and starts a peaceful game', async ({ page }) => {
+      await page.goto('./');
+      await page.getByRole('button', { name: 'Спокойный', exact: true }).tap();
+      const panel = (await dialog(page).boundingBox())!;
+      const scrollStart = await dialog(page).evaluate(node => node.scrollTop);
+      const finger = await touchInput(page);
+      const x = panel.x + panel.width - 12;
+      await finger.down(1, { x, y: panel.y + panel.height - 30 });
+      for (let step = 1; step <= 8; step++) {
+        await finger.move(1, { x, y: panel.y + panel.height - 30 - (panel.height - 60) * step / 8 });
+        await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+      }
+      await finger.up(1);
+      await expect.poll(() => dialog(page).evaluate(node => node.scrollTop)).toBeGreaterThan(scrollStart);
+      const play = page.getByRole('button', { name: 'Играть', exact: true });
+      await expect(play).toBeInViewport({ ratio: 1 });
+      await play.tap();
+      await expect(dialog(page)).not.toBeVisible();
+      await expect(page.locator('.enemy')).toHaveCount(0);
+      await expect(page.locator('#joystick')).toBeVisible();
     });
-    await session.detach();
-    await expect.poll(() => dialog(page).evaluate(node => node.scrollTop)).toBeGreaterThan(scrollStart);
-    await page.getByRole('button', { name: 'Спокойный', exact: true }).tap();
-    await page.getByRole('button', { name: 'Играть', exact: true }).tap();
-    await expect(dialog(page)).not.toBeVisible();
-    await expect(page.locator('.enemy')).toHaveCount(0);
-    await expect(page.locator('#joystick')).toBeVisible();
   });
 });
