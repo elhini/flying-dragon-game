@@ -32,21 +32,14 @@ export function setupPwa(): () => void {
     }).catch(() => {
       // A failed download must leave the online game and any existing cache usable.
     });
-    const showReady = () => {
+    const applyAcceptedUpdate = () => {
       if (events.signal.aborted || navigator.serviceWorker.controller?.scriptURL !== worker.href) return;
       // Only the window whose user accepted the update restarts its game.
       if (requested && navigator.serviceWorker.controller === requested) {
         window.location.reload();
-        return;
-      }
-      const status = document.querySelector<HTMLElement>('#offline-status');
-      if (status) {
-        status.textContent = 'Можно играть без интернета.';
-        status.hidden = false;
       }
     };
-    navigator.serviceWorker.addEventListener('controllerchange', showReady, { signal: events.signal });
-    void navigator.serviceWorker.ready.then(showReady);
+    navigator.serviceWorker.addEventListener('controllerchange', applyAcceptedUpdate, { signal: events.signal });
   }
   return () => events.abort();
 }

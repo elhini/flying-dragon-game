@@ -3,12 +3,11 @@ import { openGame, position, touchInput } from './fixtures.ts';
 
 test.beforeEach(async ({ page }) => { await openGame(page); });
 
-test('hover alone does not move the dragon or dismiss help', async ({ page }) => {
+test('hover alone does not move the dragon', async ({ page }) => {
   const before = await position(page);
   await page.mouse.move(950, 480);
   await page.clock.runFor(500);
   expect(await position(page)).toEqual(before);
-  await expect(page.locator('#game-help')).toBeVisible();
   await expect(page.locator('#touch-controls')).toBeHidden();
 });
 test('left drag flies at an arbitrary angle and release stops movement', async ({ page }) => {
@@ -22,7 +21,6 @@ test('left drag flies at an arbitrary angle and release stops movement', async (
   expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeCloseTo(90, -1);
   await page.clock.runFor(500);
   expect(await position(page)).toEqual(after);
-  await expect(page.locator('#game-help')).toBeHidden();
 });
 test('dragging updates the target while the left button stays held', async ({ page }) => {
   await page.mouse.move(950, 400);
@@ -47,15 +45,12 @@ test('arriving at the cursor stops without overshoot', async ({ page }) => {
   expect(await position(page)).toEqual(arrived);
   await page.mouse.up();
 });
-test('right mouse button and interface buttons do not initiate flight', async ({ page }) => {
+test('right mouse button does not initiate flight', async ({ page }) => {
   const before = await position(page);
   await page.mouse.move(950, 400);
   await page.mouse.down({ button: 'right' });
   await page.clock.runFor(500);
   await page.mouse.up({ button: 'right' });
-  expect(await position(page)).toEqual(before);
-  await page.getByRole('button', { name: 'Закрыть подсказку' }).click();
-  await page.clock.runFor(500);
   expect(await position(page)).toEqual(before);
 });
 test('blur stops mouse flight and clears held physical keys', async ({ page }) => {
@@ -115,7 +110,6 @@ test.describe('touch flight on the field', () => {
     const after = await position(page);
     expect(after.x).toBeGreaterThan(before.x);
     expect(after.y).toBeLessThan(before.y);
-    await expect(page.locator('#game-help')).toBeHidden();
     await touch.up(1);
     await page.clock.runFor(500);
     expect(await position(page)).toEqual(after);

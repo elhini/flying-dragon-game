@@ -9,12 +9,12 @@ export function createInput(onCommand: (command: Command) => void) {
   const held = new Set<KeyCode>();
   let joystick: Point | null = null;
   let target: Point | null = null;
-  function emit(fire = false, dismissHelp = false): void {
+  function emit(fire = false, start = false): void {
     const motion: Motion = joystick !== null
       ? { kind: 'direction', vector: { ...joystick } }
       : target !== null ? { kind: 'target', point: { ...target } }
         : { kind: 'direction', vector: normalized({ x: Number(held.has(39)) - Number(held.has(37)), y: Number(held.has(40)) - Number(held.has(38)) }) };
-    onCommand({ motion, fire, dismissHelp });
+    onCommand({ motion, fire, start });
   }
   return {
     press(code: KeyCode): void { held.add(code); emit(code === 32, true); },
@@ -31,7 +31,7 @@ export function setupKeyboard(input: ReturnType<typeof createInput>, root: Docum
     const code = physicalKeys[event.code];
     if (code === undefined) return;
     if (event.type === 'keyup') input.release(code);
-    if (event.target instanceof Element && event.target.closest('button')) return;
+    if (event.target instanceof Element && event.target.closest('button, input, select, textarea, [contenteditable]')) return;
     event.preventDefault();
     if (event.type === 'keydown' && (!event.repeat || code === 32)) input.press(code);
   };

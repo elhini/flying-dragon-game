@@ -24,24 +24,46 @@
         <div id="player-health-scale-text" class="scale-text"></div>
     </div>
     <button id="update-game" type="button" lang="ru" title="Доступна новая версия игры" hidden>Обновить</button>
-    <aside id="game-help" class="game-hint" lang="ru" aria-label="Как играть">
-      Собери все 10 кристаллов и избегай врагов.
-      <span id="game-controls-help">Зажми левую кнопку мыши, чтобы лететь к курсору, или используй стрелки. Стреляй пробелом.</span>
-      <span id="offline-status" role="status" hidden></span>
-      <button id="close-game-help" type="button" aria-label="Закрыть подсказку">×</button>
-    </aside>
     <aside id="game-over" class="game-hint" lang="ru" role="alert" hidden>
       Твой дракон погиб.<br>
-      Чтобы начать заново, обнови страницу<br>
-      или нажми кнопку
-      <button class="game-restart" type="button">Ещё раз</button>
+      Чтобы начать заново, обнови страницу или нажми <button class="game-restart" type="button">Ещё раз</button><br>
+      Чтобы изменить сложность, нажми <button class="game-settings-open" type="button">Настройки</button>
     </aside>
     <aside id="game-won" class="game-hint" lang="ru" role="status" hidden>
       Ты победил, поздравляю!<br>
-      Чтобы начать заново, обнови страницу<br>
-      или нажми кнопку
-      <button class="game-restart" type="button">Ещё раз</button>
+      Чтобы начать заново, обнови страницу или нажми <button class="game-restart" type="button">Ещё раз</button><br>
+      Чтобы изменить сложность, нажми <button class="game-settings-open" type="button">Настройки</button>
     </aside>
+    <dialog id="game-settings" lang="ru" aria-labelledby="game-settings-title">
+      <form>
+        <h1 id="game-settings-title" tabindex="-1" autofocus>Настройки игры</h1>
+        <div class="settings-presets" role="group" aria-label="Сложность">
+          <button type="button" data-preset="calm" aria-pressed="false">Спокойный</button>
+          <button type="button" data-preset="easy" aria-pressed="false">Лёгкий</button>
+          <button type="button" data-preset="normal" aria-pressed="true">Обычный</button>
+        </div>
+        <div class="settings-field">
+          <label for="enemy-count">Количество врагов</label>
+          <output id="enemy-count-value" for="enemy-count">6</output>
+          <input id="enemy-count" type="range" min="0" max="6" step="1" value="6">
+        </div>
+        <div class="settings-field">
+          <label for="enemy-speed">Скорость врагов</label>
+          <output id="enemy-speed-value" for="enemy-speed">100%</output>
+          <input id="enemy-speed" type="range" min="0" max="60" step="10" value="60">
+        </div>
+        <div class="settings-field">
+          <label for="enemy-damage">Сила удара</label>
+          <output id="enemy-damage-value" for="enemy-damage">5</output>
+          <input id="enemy-damage" type="range" min="0" max="5" step="1" value="5">
+        </div>
+        <p class="settings-help">
+          Собери все 10 кристаллов и избегай врагов.
+          <span id="game-controls-help">Зажми левую кнопку мыши, чтобы лететь к курсору, или используй стрелки. Стреляй пробелом.</span>
+        </p>
+        <button class="settings-play" type="submit">Играть</button>
+      </form>
+    </dialog>
     <nav id="touch-controls" aria-label="Управление драконом" hidden>
       <div id="joystick" class="joystick" role="group" aria-label="Джойстик">
         <span class="joystick-guide" aria-hidden="true">✥</span>

@@ -45,13 +45,13 @@ test('firing keeps the active movement source intact', () => {
   assert.equal(commands.at(-1)!.fire, true);
   assert.deepEqual(commands.at(-1)!.motion, { kind: 'direction', vector: { x: 0.6, y: -0.8 } });
 });
-test('reset clears every source and release alone does not dismiss initial help', () => {
+test('reset clears every source and release alone does not start the game', () => {
   const { input, commands } = fixture();
   input.release(39);
-  assert.equal(commands.at(-1)!.dismissHelp, false);
+  assert.equal(commands.at(-1)!.start, false);
   input.press(39);
   input.setJoystick({ x: 1, y: 0 });
   input.setTarget({ x: 100, y: 200 });
   input.reset();
-  assert.deepEqual(commands.at(-1), { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, dismissHelp: false });
+  assert.deepEqual(commands.at(-1), { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, start: false });
 });

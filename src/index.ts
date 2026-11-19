@@ -5,41 +5,54 @@ import { setupTouchControls } from './touch-controls.ts';
 import { setupPointerControls } from './pointer-controls.ts';
 import { createView, element } from './view.ts';
 import { setupPwa } from './pwa.ts';
+import { loadSettings, setupSettings } from './settings-ui.ts';
 
 const removePwa = setupPwa();
 
 const viewport = () => ({ width: document.documentElement.clientWidth, height: document.documentElement.clientHeight });
-let state = createGame(viewport());
+let settings = loadSettings();
+let configuring = true;
+let state = createGame(viewport(), Math.random, settings);
 let previous: number | undefined;
 const view = createView();
 const input = createInput(command => {
-  if (state.status !== 'playing') return;
+  if (configuring || state.status !== 'playing') return;
   applyCommand(state, command);
   view.render(state);
 });
 const removeKeyboard = setupKeyboard(input);
 const touch = setupTouchControls({
-  isFinished: () => state.status !== 'playing',
+  isFinished: () => configuring || state.status !== 'playing',
   onDirection: direction => input.setJoystick(direction),
   onFire: () => input.fire(),
 });
-const pointer = setupPointerControls({ isFinished: () => state.status !== 'playing', onTarget: point => input.setTarget(point) });
+const pointer = setupPointerControls({ isFinished: () => configuring || state.status !== 'playing', onTarget: point => input.setTarget(point) });
 function resetInput(): void { input.reset(); touch.reset(); pointer.reset(); }
+const settingsUi = setupSettings(chosen => {
+  resetInput();
+  settings = chosen;
+  state = createGame(viewport(), Math.random, settings);
+  previous = undefined;
+  configuring = false;
+  view.render(state);
+});
 
 element('#game-controls-help').textContent = window.matchMedia('(pointer: coarse)').matches
   ? 'Лети джойстиком или удерживай палец на поле. Стреляй кнопкой «Огонь».'
   : 'Зажми левую кнопку мыши, чтобы лететь к курсору, или используй стрелки. Стреляй пробелом.';
 
 const events = new AbortController();
-element<HTMLButtonElement>('#close-game-help').addEventListener('click', event => {
-  (event.currentTarget as HTMLButtonElement).blur();
-  state.helpVisible = false;
-  view.render(state);
-}, { signal: events.signal });
+document.querySelectorAll<HTMLButtonElement>('.game-settings-open').forEach(button => {
+  button.addEventListener('click', () => {
+    resetInput();
+    configuring = true;
+    settingsUi.open(settings);
+  }, { signal: events.signal });
+});
 document.querySelectorAll<HTMLButtonElement>('.game-restart').forEach(button => {
   button.addEventListener('click', () => {
     resetInput();
-    state = createGame(viewport());
+    state = createGame(viewport(), Math.random, settings);
     previous = undefined;
     button.blur();
     view.render(state);
@@ -57,7 +70,7 @@ document.addEventListener('visibilitychange', () => {
 let frameId = 0;
 function frame(now: number): void {
   // Resume a hidden tab without simulating an unbounded backlog of frames.
-  if (previous !== undefined && !document.hidden && advanceGame(state, Math.min(now - previous, 100))) {
+  if (previous !== undefined && !configuring && !document.hidden && advanceGame(state, Math.min(now - previous, 100))) {
     if (state.status !== 'playing') resetInput();
     view.render(state);
   }
@@ -65,6 +78,7 @@ function frame(now: number): void {
   frameId = requestAnimationFrame(frame);
 }
 view.render(state);
+settingsUi.open(settings);
 frameId = requestAnimationFrame(frame);
 
 // Vite replaces this module during development; release all listeners and timers.
@@ -75,4 +89,5 @@ if (import.meta.hot) import.meta.hot.dispose(() => {
   touch.dispose();
   pointer.dispose();
   removePwa();
+  settingsUi.dispose();
 });

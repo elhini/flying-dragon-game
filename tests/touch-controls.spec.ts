@@ -8,13 +8,13 @@ async function center(page: import('@playwright/test').Page, selector = '#joysti
   const box = (await page.locator(selector).boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
-test('joystick replaces four buttons and dismisses help on touch', async ({ page }) => {
+test('joystick replaces four buttons and responds to touch', async ({ page }) => {
   await expect(page.locator('#joystick')).toBeVisible();
   await expect(page.locator('.touch-up, .touch-left, .touch-right, .touch-down')).toHaveCount(0);
   await expect(page.locator('#game-controls-help')).toContainText('джойстиком');
   const touch = await touchInput(page);
   await touch.down(1, await center(page));
-  await expect(page.locator('#game-help')).toBeHidden();
+  await expect(page.locator('#joystick')).toHaveClass(/pressed/);
   await touch.up(1);
 });
 test('joystick supports an arbitrary angle and release stops flight', async ({ page }) => {

@@ -12,7 +12,7 @@ function fixture() {
   return state;
 }
 function steer(state: GameState, x: number, y: number, fire = false) {
-  applyCommand(state, { motion: { kind: 'direction', vector: { x, y } }, fire, dismissHelp: true });
+  applyCommand(state, { motion: { kind: 'direction', vector: { x, y } }, fire, start: true });
 }
 function close(actual: number, expected: number) { assert.ok(Math.abs(actual - expected) < 0.00001, `${actual} != ${expected}`); }
 
@@ -98,7 +98,7 @@ test('steering accepts an arbitrary angle and advances continuously at 180px/s',
   const state = fixture();
   steer(state, 3, 4);
   assert.equal(state.player.x, 100);
-  assert.equal(state.helpVisible, false);
+  assert.equal(state.started, true);
   advanceGame(state, 1000);
   close(state.player.x, 208);
   close(state.player.y, 244);
@@ -125,7 +125,7 @@ test('movement distance is independent of frame rate', () => {
 
 test('a mouse target is reached without overshoot or oscillation', () => {
   const state = fixture();
-  applyCommand(state, { motion: { kind: 'target', point: { x: 250, y: 230 } }, fire: false, dismissHelp: true });
+  applyCommand(state, { motion: { kind: 'target', point: { x: 250, y: 230 } }, fire: false, start: true });
   advanceGame(state, 1000);
   close(state.player.x, 150);
   close(state.player.y, 130);
@@ -145,12 +145,12 @@ test('release and repeated input events cannot add movement steps', () => {
   close(state.player.x, 118);
 });
 
-test('initial help gives protection until the first gameplay interaction', () => {
+test('the dragon is protected until the first gameplay interaction', () => {
   const state = fixture();
   state.enemies.forEach(enemy => Object.assign(enemy, { x: 150, y: 150 }));
   advanceGame(state, 5000);
   assert.equal(state.player.health, 100);
-  applyCommand(state, { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, dismissHelp: false });
+  applyCommand(state, { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, start: false });
   advanceGame(state, 1000);
   assert.equal(state.player.health, 100);
   steer(state, 0, 0);

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { expectFreshGame, holdKey, openGame, position, restartGame } from './fixtures.ts';
+import { expectOfflineReady, expectFreshGame, holdKey, openGame, position, restartGame } from './fixtures.ts';
 
 test('installation metadata and icons resolve within the game directory', async ({ page }) => {
   await page.goto('./');
@@ -41,13 +41,13 @@ test('installation metadata and icons resolve within the game directory', async 
 
 test('offline reload and a new launch retain images, flight, fire and restart', async ({ page, context }) => {
   await openGame(page, { items: [{ x: 900, y: 310 }] });
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   const scope = await page.evaluate(async () => (await navigator.serviceWorker.ready).scope);
   expect(scope).toBe(new URL('./', page.url()).href);
   await context.setOffline(true);
   await page.reload();
   await expectFreshGame(page);
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   const images = await page.locator('.dragon-sprite, .item, .enemy').evaluateAll(async elements => {
     const urls = [...new Set(elements.map(element => getComputedStyle(element).backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1]))];
     return Promise.all(urls.map(async url => {
@@ -72,5 +72,5 @@ test('offline reload and a new launch retain images, flight, fire and restart', 
   const launched = await context.newPage();
   await launched.goto(url);
   await expectFreshGame(launched);
-  await expect(launched.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(launched);
 });

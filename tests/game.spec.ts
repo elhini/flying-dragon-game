@@ -21,17 +21,22 @@ async function resizeGame(page: Page, size: { width: number; height: number }) {
   await page.clock.runFor(32);
 }
 for (const key of ['ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown', 'Space']) {
-  test(`hides the initial hint on physical ${key}`, async ({ page }) => {
+  test(`physical ${key} works after closing settings`, async ({ page }) => {
     await openGame(page);
-    await page.keyboard.press(key);
-    await expect(page.locator('#game-help')).toBeHidden();
+    const before = await position(page);
+    await holdKey(page, key, 100);
+    if (key === 'Space') await expect(page.locator('.fire')).toHaveCount(1);
+    else expect(await position(page)).not.toEqual(before);
   });
 }
-test('keeps the initial hint for unrelated keys and key releases', async ({ page }) => {
+test('unrelated keys and key releases do not start the game', async ({ page }) => {
   await openGame(page);
+  const enemies = () => page.locator('.enemy').evaluateAll(nodes => nodes.map(node => node.getAttribute('style')));
+  const before = await enemies();
   await page.keyboard.press('a');
   await page.keyboard.up('ArrowRight');
-  await expect(page.locator('#game-help')).toBeVisible();
+  await page.clock.runFor(1000);
+  expect(await enemies()).toEqual(before);
 });
 test('leaves the idle field untouched between inputs', async ({ page }) => {
   await openGame(page);
@@ -121,37 +126,26 @@ test('a fireball destroys an enemy at its current position after resize', async 
   await page.clock.runFor(400);
   await expect(page.locator('.enemy')).toHaveCount(5);
 });
-for (const closeHelp of [false, true]) {
-  test(`shows the victory message with the initial hint ${closeHelp ? 'closed' : 'open'}`, async ({ page }) => {
-    await openGame(page, { items: [{ x: 750, y: 310 }], enemies: [{ x: 1100, y: 600 }] });
-    if (closeHelp) await page.getByRole('button', { name: 'Закрыть подсказку' }).click();
-    await holdKey(page, 'ArrowRight', 100);
-    await expect(page.locator('#items-scale-text')).toHaveText('10 / 10');
-    await expect(page.locator('#game-won')).toHaveText('Ты победил, поздравляю! Чтобы начать заново, обнови страницу или нажми кнопку Ещё раз');
-    await expect(page.locator('#game-help')).toBeHidden();
-    await expect(page.locator('#game-over')).toBeHidden();
-    const stopped = await position(page);
-    await holdKey(page, 'ArrowLeft', 300);
-    await page.keyboard.press('Space');
-    expect(await position(page)).toEqual(stopped);
-    await expect(page.locator('.fire')).toHaveCount(0);
-    await restartGame(page, closeHelp ? 'Enter' : 'click');
-  });
-  test(`shows the death message with the initial hint ${closeHelp ? 'closed' : 'open'}`, async ({ page }) => {
-    await openGame(page, { items: [{ x: 1100, y: 600 }], enemies: [{ x: 650, y: 310 }] });
-    if (closeHelp) {
-      await page.getByRole('button', { name: 'Закрыть подсказку' }).focus();
-      await page.keyboard.press('Space');
-      await expect(page.locator('#game-help')).toBeHidden();
-      await expect(page.locator('.fire')).toHaveCount(0);
-    }
-    await holdKey(page, 'ArrowRight', 1600);
-    await expect(page.locator('#player-health-scale-text')).toHaveText('0 / 100');
-    await expect(page.locator('#game-over')).toHaveText('Твой дракон погиб. Чтобы начать заново, обнови страницу или нажми кнопку Ещё раз');
-    await expect(page.locator('#game-help')).toBeHidden();
-    await restartGame(page, closeHelp ? 'Space' : 'click');
-  });
-}
+test('shows the victory message and stops gameplay', async ({ page }) => {
+  await openGame(page, { items: [{ x: 750, y: 310 }], enemies: [{ x: 1100, y: 600 }] });
+  await holdKey(page, 'ArrowRight', 100);
+  await expect(page.locator('#items-scale-text')).toHaveText('10 / 10');
+  await expect(page.locator('#game-won')).toHaveText('Ты победил, поздравляю! Чтобы начать заново, обнови страницу или нажми Ещё раз Чтобы изменить сложность, нажми Настройки');
+  await expect(page.locator('#game-over')).toBeHidden();
+  const stopped = await position(page);
+  await holdKey(page, 'ArrowLeft', 300);
+  await page.keyboard.press('Space');
+  expect(await position(page)).toEqual(stopped);
+  await expect(page.locator('.fire')).toHaveCount(0);
+  await restartGame(page, 'click');
+});
+test('shows the death message and supports restarting with Space', async ({ page }) => {
+  await openGame(page, { items: [{ x: 1100, y: 600 }], enemies: [{ x: 650, y: 310 }] });
+  await holdKey(page, 'ArrowRight', 1600);
+  await expect(page.locator('#player-health-scale-text')).toHaveText('0 / 100');
+  await expect(page.locator('#game-over')).toHaveText('Твой дракон погиб. Чтобы начать заново, обнови страницу или нажми Ещё раз Чтобы изменить сложность, нажми Настройки');
+  await restartGame(page, 'Space');
+});
 test('repeated restarts keep one input handler and a playable fresh game', async ({ page }) => {
   await openGame(page, { items: [{ x: 750, y: 310 }], enemies: [{ x: 1100, y: 600 }] });
   for (let round = 0; round < 3; round++) {

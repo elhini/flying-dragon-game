@@ -1,14 +1,15 @@
 import { test, expect } from '@playwright/test';
-import { openGame, holdKey, restartGame } from './fixtures.ts';
+import { expectOfflineReady, openGame, holdKey, restartGame } from './fixtures.ts';
 
 for (const [random, terrain] of [[0, 'grass'], [0.5, 'earth'], [0.999, 'stone']] as const) {
   test(`${terrain} repeats across the field and remains available offline after restart`, async ({ page, context }) => {
     await openGame(page, { terrain: random, items: [{ x: 900, y: 310 }] });
     const field = page.locator('#field');
     await expect(field).toHaveAttribute('data-terrain', terrain);
-    await expect(page.locator('#offline-status')).toBeVisible();
+    await expectOfflineReady(page);
     await context.setOffline(true);
     await page.reload();
+    await page.getByRole('button', { name: 'Играть', exact: true }).click();
     const imageSize = await field.evaluate(async node => {
       const style = getComputedStyle(node);
       const url = style.backgroundImage.match(/url\("?([^"\)]+)"?\)/)?.[1];

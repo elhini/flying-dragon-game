@@ -6,7 +6,6 @@ test('enemies wait, pursue a stationary dragon, stop to attack and follow it aga
   const enemy = page.locator('.enemy').first();
   const position = () => enemy.evaluate(node => ({ x: parseFloat(node.style.left), y: parseFloat(node.style.top) }));
   const initial = await position();
-  await page.locator('#close-game-help').click();
   await page.clock.runFor(3000);
   expect(await position()).toEqual(initial);
   await page.keyboard.press('ArrowRight');

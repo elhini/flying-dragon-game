@@ -48,7 +48,6 @@ for (const outcome of ['death', 'victory']) {
       items: [outcome === 'victory' ? { x: 360, y: 800 } : { x: 0, y: 30 }],
       enemies: [outcome === 'death' ? { x: 330, y: 770 } : { x: 0, y: 30 }],
     });
-    await page.getByRole('button', { name: 'Закрыть подсказку' }).click();
     const before = await controlGeometry(page);
     await holdKey(page, 'ArrowDown', 2000);
     await holdKey(page, 'ArrowRight', 1800);

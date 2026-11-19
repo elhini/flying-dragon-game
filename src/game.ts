@@ -1,5 +1,7 @@
 import { bounds, circlesIntersect, fit, fitOutside, intersects, normalized, sizesFor, sweep } from './geometry.ts';
 import type { Point, Size } from './geometry.ts';
+import { DEFAULT_SETTINGS, normalizeSettings } from './settings.ts';
+import type { GameSettings } from './settings.ts';
 
 export interface Sprite extends Point { id: number; type: 1 | 2 | 3 }
 export interface Enemy extends Sprite { angle: number; hitting: boolean; hitCooldownMs: number }
@@ -20,6 +22,7 @@ export interface Fire extends Point {
 export type Motion = { kind: 'direction'; vector: Point } | { kind: 'target'; point: Point };
 export interface GameState {
   viewport: Size;
+  settings: GameSettings;
   terrain: 'grass' | 'earth' | 'stone';
   player: Player;
   motion: Motion;
@@ -30,10 +33,9 @@ export interface GameState {
   nextFireId: number;
   collected: number;
   status: 'playing' | 'won' | 'dead';
-  helpVisible: boolean;
 }
-export interface Command { motion: Motion; fire: boolean; dismissHelp: boolean }
-export const RULES = { items: 10, enemies: 6, health: 100, damage: 5, damageIntervalMs: 250, playerHitRadiusRatio: 0.5, enemyHitRadiusRatio: 0.5, startClearance: 20, speed: 180, enemySpeed: 60, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
+export interface Command { motion: Motion; fire: boolean; start: boolean }
+export const RULES = { items: 10, health: 100, damageIntervalMs: 250, playerHitRadiusRatio: 0.5, enemyHitRadiusRatio: 0.5, startClearance: 20, speed: 180, fireSpeed: 500, turnMs: 150, fadeMs: 1000 } as const;
 
 export function dangerRadiiFor(sizes: ReturnType<typeof sizesFor>) {
   return {
@@ -42,7 +44,8 @@ export function dangerRadiiFor(sizes: ReturnType<typeof sizesFor>) {
   };
 }
 
-export function createGame(viewport: Size, random: () => number = Math.random): GameState {
+export function createGame(viewport: Size, random: () => number = Math.random, settings: GameSettings = DEFAULT_SETTINGS): GameState {
+  const configured = normalizeSettings(settings);
   const sizes = sizesFor(viewport);
   const integer = (min: number, max: number) => Math.floor(random() * (Math.floor(max) - min + 1)) + min;
   const spawn = (count: number, side: number): Sprite[] => Array.from({ length: count }, (_, i) => ({
@@ -52,6 +55,7 @@ export function createGame(viewport: Size, random: () => number = Math.random): 
   }));
   const state: GameState = {
     viewport: { ...viewport },
+    settings: configured,
     player: {
       x: Math.round((viewport.width - sizes.player.width) / 2),
       y: Math.round((viewport.height - sizes.player.height) / 2),
@@ -59,9 +63,9 @@ export function createGame(viewport: Size, random: () => number = Math.random): 
     },
     motion: { kind: 'direction', vector: { x: 0, y: 0 } }, started: false,
     items: spawn(RULES.items, 30),
-    enemies: spawn(RULES.enemies, 70).map(enemy => ({ ...enemy, angle: 0, hitting: false, hitCooldownMs: 0 })),
+    enemies: spawn(configured.enemyCount, 70).map(enemy => ({ ...enemy, angle: 0, hitting: false, hitCooldownMs: 0 })),
     terrain: (['grass', 'earth', 'stone'] as const)[integer(0, 2)]!,
-    fires: [], nextFireId: 1, collected: 0, status: 'playing', helpVisible: true,
+    fires: [], nextFireId: 1, collected: 0, status: 'playing',
   };
   fit(state.player, sizes.player, viewport);
   clearStartingArea(state);
@@ -125,7 +129,7 @@ export function applyCommand(state: GameState, command: Command): void {
   state.motion = command.motion.kind === 'direction'
     ? { kind: 'direction', vector: normalized(command.motion.vector) }
     : { kind: 'target', point: { ...command.motion.point } };
-  if (command.dismissHelp || command.fire) { state.helpVisible = false; state.started = true; }
+  if (command.start || command.fire) state.started = true;
   aim(state, motionVector(state));
   if (command.fire) {
     const sizes = sizesFor(state.viewport);
@@ -150,7 +154,7 @@ function advanceEnemies(state: GameState, elapsedMs: number): boolean {
     const distance = Math.hypot(vector.x, vector.y);
     if (distance <= reach) continue;
     // Stop just inside contact range so rounding cannot prevent an attack.
-    const travel = Math.min(RULES.enemySpeed * elapsedMs / 1000, distance - reach + 0.0000001);
+    const travel = Math.min(state.settings.enemySpeed * elapsedMs / 1000, distance - reach + 0.0000001);
     const before = { x: enemy.x, y: enemy.y };
     enemy.x += vector.x / distance * travel;
     enemy.y += vector.y / distance * travel;
@@ -179,7 +183,7 @@ function contacts(state: GameState, elapsedMs: number): boolean {
     if (hitting !== enemy.hitting) changed = true;
     enemy.hitting = hitting;
     if (hitting && enemy.hitCooldownMs < 0.000001) {
-      state.player.health = Math.max(0, state.player.health - RULES.damage);
+      state.player.health = Math.max(0, state.player.health - state.settings.enemyDamage);
       enemy.hitCooldownMs = RULES.damageIntervalMs;
       changed = true;
     }

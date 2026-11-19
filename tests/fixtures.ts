@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 interface Position { x: number; y: number }
 export interface FieldLayout { items?: Position[]; enemies?: Position[]; terrain?: number }
 
-export async function openGame(page: Page, layout: FieldLayout = {}): Promise<void> {
+export async function openGame(page: Page, layout: FieldLayout = {}, start = true): Promise<void> {
   await page.clock.install();
   // Control initial generation, not DOM coordinates or a production test hook.
   await page.addInitScript(layout => {
@@ -32,6 +32,7 @@ export async function openGame(page: Page, layout: FieldLayout = {}): Promise<vo
     };
   }, layout);
   await page.goto('./');
+  if (start) await page.getByRole('button', { name: 'Играть', exact: true }).click();
   await expect(page.locator('.item')).toHaveCount(10);
   await expect(page.locator('.enemy')).toHaveCount(6);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
@@ -73,19 +74,25 @@ export async function touchInput(page: Page) {
   };
 }
 
-export async function expectFreshGame(page: Page): Promise<void> {
+export async function expectFreshGame(page: Page, enemyCount = 6): Promise<void> {
+  if (await page.locator('#game-settings').isVisible()) await page.getByRole('button', { name: 'Играть', exact: true }).click();
   await expect(page.locator('.item')).toHaveCount(10);
-  await expect(page.locator('.enemy')).toHaveCount(6);
+  await expect(page.locator('.enemy')).toHaveCount(enemyCount);
   await expect(page.locator('.fire')).toHaveCount(0);
   await expect(page.locator('#player')).not.toHaveClass(/finished|dead|won/);
   await expect(page.locator('#items-scale-text')).toHaveText('0 / 10');
   await expect(page.locator('#player-health-scale-text')).toHaveText('100 / 100');
-  await expect(page.locator('#game-help')).toBeVisible();
+  await expect(page.locator('#game-settings')).not.toBeVisible();
   await expect(page.locator('#game-won')).toBeHidden();
   await expect(page.locator('#game-over')).toBeHidden();
 }
 
-export async function restartGame(page: Page, method: 'click' | 'tap' | 'Enter' | 'Space'): Promise<void> {
+export async function expectOfflineReady(page: Page, ready = true): Promise<void> {
+  const workerURL = new URL('sw.js', page.url()).href;
+  await expect.poll(() => page.evaluate(url => navigator.serviceWorker.controller?.scriptURL === url, workerURL)).toBe(ready);
+}
+
+export async function restartGame(page: Page, method: 'click' | 'tap' | 'Enter' | 'Space', enemyCount = 6): Promise<void> {
   const originalDocument = await page.evaluateHandle(() => document);
   const button = page.getByRole('button', { name: 'Ещё раз', exact: true });
   if (method === 'Enter' || method === 'Space') {
@@ -96,7 +103,8 @@ export async function restartGame(page: Page, method: 'click' | 'tap' | 'Enter' 
   } else {
     await button.click();
   }
-  await expectFreshGame(page);
+  await expect(page.locator('#game-settings')).not.toBeVisible();
+  await expectFreshGame(page, enemyCount);
   expect(await originalDocument.evaluate(original => original === document)).toBe(true);
   await originalDocument.dispose();
   await expect(page.locator('.game-restart:focus')).toHaveCount(0);

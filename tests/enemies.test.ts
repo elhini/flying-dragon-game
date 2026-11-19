@@ -12,15 +12,14 @@ function fixture() {
   return state;
 }
 function start(state: ReturnType<typeof createGame>): void {
-  applyCommand(state, { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, dismissHelp: true });
+  applyCommand(state, { motion: { kind: 'direction', vector: { x: 0, y: 0 } }, fire: false, start: true });
 }
 function close(actual: number, expected: number): void {
   assert.ok(Math.abs(actual - expected) < 0.00001, `${actual} != ${expected}`);
 }
 
-test('enemies wait for the first gameplay action even after the help is closed', () => {
+test('enemies wait for the first gameplay action', () => {
   const state = fixture();
-  state.helpVisible = false;
   const before = structuredClone(state.enemies);
   advanceGame(state, 5000);
   assert.deepEqual(state.enemies, before);

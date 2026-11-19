@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { holdKey, openGame, position, restartGame } from './fixtures.ts';
+import { expectOfflineReady, holdKey, openGame, position, restartGame } from './fixtures.ts';
 
 async function decodedSprite(page: Page): Promise<string> {
   const sprite = page.locator('.dragon-sprite');
@@ -34,7 +34,7 @@ test('the dragon animation moves without changing flight bounds or controls', as
 
 test('death stops the animation offline and it resumes after restart and reload', async ({ page, context }) => {
   await openGame(page, { items: [{ x: 1100, y: 600 }], enemies: [{ x: 650, y: 310 }] });
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   await context.setOffline(true);
   await holdKey(page, 'ArrowRight', 1600);
   await expect(page.locator('#player')).toHaveClass(/dead/);

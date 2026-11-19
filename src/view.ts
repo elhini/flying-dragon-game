@@ -16,7 +16,6 @@ function place(node: HTMLElement, point: Point, size: Size): void {
 export function createView() {
   const player = element('#player');
   const field = element('#field');
-  const help = element('#game-help');
   const won = element('#game-won');
   const dead = element('#game-over');
   const itemsText = element('#items-scale-text');
@@ -62,7 +61,6 @@ export function createView() {
       player.classList.toggle('dead', state.status === 'dead');
       player.classList.toggle('won', state.status === 'won');
       player.classList.toggle('hitting', state.enemies.some(enemy => enemy.hitting));
-      help.hidden = !state.helpVisible;
       won.hidden = state.status !== 'won';
       dead.hidden = state.status !== 'dead';
       itemsText.textContent = `${state.collected} / ${RULES.items}`;

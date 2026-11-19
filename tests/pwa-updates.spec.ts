@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { releaseServer } from './pwa-server.ts';
-import { expectFreshGame, position } from './fixtures.ts';
+import { expectOfflineReady, expectFreshGame, position } from './fixtures.ts';
 
 let directory: string;
 const test = base.extend<{ releases: Awaited<ReturnType<typeof releaseServer>> }>({
@@ -30,7 +30,8 @@ test.afterAll(async () => { if (directory) await rm(directory, { recursive: true
 
 test('a waiting update preserves games in every window and activates after they close', async ({ page, context, releases }) => {
   await page.goto(releases.url);
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
+  await page.getByRole('button', { name: 'Играть', exact: true }).click();
   const neighborCache = `flying-dragon-game:${releases.origin}/neighbor/:v1`;
   await page.evaluate(async name => {
     await (await caches.open(name)).put('/neighbor/data', new Response('neighbor data'));
@@ -46,7 +47,7 @@ test('a waiting update preserves games in every window and activates after they 
   const originalDocument = await page.evaluateHandle(() => document);
   const secondWindow = await context.newPage();
   await secondWindow.goto(releases.url);
-  await expect(secondWindow.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(secondWindow);
   releases.publish();
   const workerStarted = context.waitForEvent('serviceworker');
   await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
@@ -82,21 +83,41 @@ test('a waiting update preserves games in every window and activates after they 
 for (const touch of [false, true]) {
   test.describe(touch ? 'touch update' : 'desktop update', () => {
     test.use({ hasTouch: touch, viewport: touch ? { width: 420, height: 740 } : { width: 1280, height: 720 } });
+    test('an update is clickable below the settings dialog before starting a game', async ({ page, context, releases }) => {
+      await page.goto(releases.url);
+      await expectOfflineReady(page);
+      const settings = page.getByRole('dialog', { name: 'Настройки игры' });
+      await expect(settings).toBeVisible();
+      releases.publish();
+      await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
+      const update = page.locator('#update-game');
+      await expect(update).toBeVisible();
+      const buttonBox = (await update.boundingBox())!;
+      const settingsBox = (await settings.boundingBox())!;
+      await context.setOffline(true);
+      if (touch) await update.tap({ timeout: 3000 }); else await update.click({ timeout: 3000 });
+      await expect(page).toHaveTitle('Dragon second');
+      await expect(settings).toBeVisible();
+      await expect(update).toBeHidden();
+      const viewport = page.viewportSize()!;
+      expect(buttonBox.x + buttonBox.width / 2).toBeCloseTo(viewport.width / 2, 0);
+      expect(buttonBox.y + buttonBox.height).toBeCloseTo(viewport.height - 16, 0);
+      expect(buttonBox.y).toBeGreaterThan(settingsBox.y + settingsBox.height);
+    });
     test('the update button applies a downloaded release offline without reloading other games', async ({ page, context, releases }) => {
       await page.goto(releases.url);
-      await expect(page.locator('#offline-status')).toBeVisible();
+      await expectOfflineReady(page);
+      await page.getByRole('button', { name: 'Играть', exact: true }).click();
       const update = page.getByRole('button', { name: 'Обновить', exact: true });
       await expect(update).toBeHidden();
       const otherGame = await context.newPage();
       await otherGame.goto(releases.url);
-      await expect(otherGame.locator('#offline-status')).toBeVisible();
+      await expectOfflineReady(otherGame);
       await page.bringToFront();
       if (touch) await context.setOffline(true);
       releases.publish();
       if (touch) await context.setOffline(false);
       else await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
-      await expect(update).toBeVisible();
-      await page.locator('#close-game-help').click();
       await expect(update).toBeVisible();
       await expect(page).toHaveTitle('Dragon first');
       await context.setOffline(true);
@@ -105,7 +126,7 @@ for (const touch of [false, true]) {
       if (touch) await update.tap(); else await update.click();
       await expect(page).toHaveTitle('Dragon second');
       await expectFreshGame(page);
-      await expect(page.locator('#offline-status')).toBeVisible();
+      await expectOfflineReady(page);
       await expect(update).toBeHidden();
       expect(navigations).toBe(1);
       await expect(otherGame).toHaveTitle('Dragon first');
@@ -119,7 +140,7 @@ for (const touch of [false, true]) {
 
 test('a failed update leaves the previous version available for offline launch', async ({ page, context, releases }) => {
   await page.goto(releases.url);
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   releases.publish();
   releases.fail('index.html');
   const observed = await page.evaluateHandle(async () => {
@@ -141,12 +162,12 @@ test('a failed update leaves the previous version available for offline launch',
   await launched.goto(releases.url);
   await expectFreshGame(launched);
   await expect(launched).toHaveTitle('Dragon first');
-  await expect(launched.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(launched);
 });
 
 test('a partially published release cannot cache old HTML as the new version', async ({ page, context, releases }) => {
   await page.goto(releases.url);
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   releases.publish();
   releases.pin('index.html', 'first');
   const observed = await page.evaluateHandle(async () => {
@@ -183,10 +204,10 @@ test('a parent site worker cannot report offline readiness for an incomplete gam
   await page.goto(releases.url);
   await expectFreshGame(page);
   await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL)).toBe(`${releases.origin}/parent-sw.js`);
-  await expect(page.locator('#offline-status')).toBeHidden();
+  await expectOfflineReady(page, false);
   releases.fail(null);
   await page.reload();
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
 });
 
 test('a first installation rejects new HTML served with an old worker', async ({ page, releases }) => {
@@ -205,10 +226,10 @@ test('a first installation rejects new HTML served with an old worker', async ({
     }));
   });
   expect(result).toBe('redundant');
-  await expect(page.locator('#offline-status')).toBeHidden();
+  await expectOfflineReady(page, false);
   releases.pin('sw.js', null);
   await page.reload();
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
 });
 
 test('a failed first installation leaves no partial game cache and can retry', async ({ page, context, releases }) => {
@@ -226,10 +247,10 @@ test('a failed first installation leaves no partial game cache and can retry', a
   });
   expect(result).toBe('redundant');
   expect(await page.evaluate(() => caches.keys())).toEqual([]);
-  await expect(page.locator('#offline-status')).toBeHidden();
+  await expectOfflineReady(page, false);
   releases.fail(null);
   await page.reload();
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   await context.setOffline(true);
   await page.goto(`${releases.url}index.html?from=home`);
   await expectFreshGame(page);
@@ -237,7 +258,7 @@ test('a failed first installation leaves no partial game cache and can retry', a
 
 test('the worker leaves POST requests and uncached URLs to the server', async ({ page, releases }) => {
   await page.goto(releases.url);
-  await expect(page.locator('#offline-status')).toBeVisible();
+  await expectOfflineReady(page);
   releases.publish();
   const result = await page.evaluate(async () => {
     const post = await fetch('index.html', { method: 'POST', body: 'test' });
